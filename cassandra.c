@@ -153,7 +153,7 @@ boolean type_hint(){
 			token=_lire_token();
 			if(cql_type()){
 				token=_lire_token();
-				if(token=PCLOSE){
+				if(token==PCLOSE){
 					hint=true;
 				}
 			}
@@ -342,7 +342,7 @@ boolean  collection_literal(){
 		{printf("hani hna map");
 		collit=true;
 		}
-	else if(c=UDT_LIT){collit=true;}
+	else if(c==UDT_LIT){collit=true;}      //manque==
 	else if(list_literal()){
 		printf("hani hna");
 		collit=true;
@@ -461,7 +461,7 @@ boolean is_udt(){
 			}
 		}
 	}
-	else if(token==ACOLF) {printf("}");isu=true;}
+	else if(token==ACOLF) {isu=true;}
 	return isu;
 }
 
@@ -524,13 +524,570 @@ boolean tuple_literal_aux(){
 	}
 	return ttp;
 }
+/***********************************************/
+
+/*********** MN hna badi code dyali ismail_melili ;p *******************/
+/******************** name *************/
+boolean name(){
+							
+							boolean name=false;
+							if(token==QUOTED_IDF){name=true;}
+							else if(token==UNQUOTED_IDF){name=true;}
+							
+							return name;
+							}	
+/****************  drop_keyspace_statement ::=  DROP KEYSPACE [ IF EXISTS ] keyspace_name*************/
+boolean drop_keyspace_statement(){
+				boolean drk=false;
+				
+					if(token=KEYSPACE){
+						token=_lire_token();
+					if(token==IF){
+						token=_lire_token();
+						if(token==EXISTS){
+							token=_lire_token();
+							if(name()){
+								token=_lire_token();
+								if(token==PVIRG){
+									drk=true;
+										}
+										}
+										}	
+						}
+					else {if(name()){
+							token=_lire_token();
+								if(token==PVIRG){
+									drk=true;
+												}	
+										}
+					}
+						
+					}
+				
+				
+return drk;		
+
+}	
+/************ table_name*******************/
+boolean table_name(){
+	boolean tab=false;
+	if(name())
+		{token=_lire_token();
+			if(token==POINT)
+				{token=_lire_token();
+					if(name())
+						{
+							token=_lire_token();
+							if(token==PVIRG)
+								{tab=true;
+								}
+								
+						}
+						
+				}
+		if(token==PVIRG)
+				{tab=true;
+				
+				}					
+	}
+	
+	
+return tab;
+}
+/************** drop_table_statement::=  DROP TABLE [ IF EXISTS ] table_name;******************/
+boolean drop_table_statement(){
+		boolean drtab=false;
+		
+				if(token==TABLE){
+					token=_lire_token();
+					if(token==IF){
+						token=_lire_token();
+						if(token==EXISTS){
+							token=_lire_token();
+							if(table_name())
+							{	
+										drtab=true;
+								
+						}
+					}
+					}
+					else{
+						if(table_name())
+							{	
+										drtab=true;
+					}	
+				}
+				
+		}
+	
+		
+
+return drtab;		
+}			
+/**************** simple_selection ******************/
+boolean simple_selection(){
+	boolean s=false;
+	if(token!=FROM){
+	if(IDF())
+		{token=_lire_token();
+			if(token==FROM)
+				{s=true;}
+			
+			if(token==VIRG)
+					{
+				token=_lire_token();
+				if(IDF())
+					{if(token==FROM)
+						{s=true;}
+						else{simple_selection();}
+					}
+					
+					}
+			
+		
+			if(token==CROPEN){
+					token=_lire_token();
+					if(term()){
+						token=_lire_token();
+						if(token==CRCLOSE)
+							{token=_lire_token();
+								if(token==FROM)
+									{s=true;}
+								else{simple_selection();}
+							}
+										
+					}
+						
+
+			
+		}
+			if(token==POINT){
+					token=_lire_token();
+						if(name()){
+							if(token==FROM)
+									{s=true;}
+							else{simple_selection();}	
+
+							}							
+											
+					}
+			
+			
+				
+	
+
+}
+else{s=true;}
+return s;
+}
+}
+/******************* update_parametre *********************/
+boolean update_parametre(){
+	boolean para=false;
+	if(token==TTL || token==TIMESTAMP)
+	{
+		token=_lire_token();
+		if(token==INUMBER || bind_marker())
+		{	para=true;
+		}
+		
+	}
+	
+return para;	
+
+}
+/******************** using_delete ******************/
+boolean using_delete(){
+boolean us=false;
+int  p=1;
+if(token==USING){
+	token=_lire_token();
+	if(update_parametre())
+	{
+		while(p==1){
+			token=_lire_token();
+			if(token==AND){
+				token=_lire_token();
+				if(update_parametre()){
+					token=_lire_token();
+					if(token==WHERE)
+					{p==0;us=true;
+
+					}
+					else{p=1;}
+				}
+				else{p=0;}
+			}
+			else if(token==WHERE){
+				p=0;us=true;
+			}
+			else{p=0;}
+		}
+
+	}
+	
+}
+	
+return us;
+}
+/*******************operateur ********************/
+boolean operateur(){
+boolean op=false;
+if(token==BIGGEREQ || token==LESSEREQ || token==DIFF || token==LESSER || token==BIGGER || token==CONTAINS || token==IN){
+op=true;
+}
+if(token==CONTAINS){
+	token=_lire_token();
+		if(token==KEY){
+			op=true;
+		}
+}
+return op;
+
+}
+/************************ ( ',' column_name )*  ************************/
+boolean iscol(){
+	boolean i=false;
+	if(token==VIRG){
+		token=_lire_token();
+			if(IDF()){
+				token=_lire_token();
+				if(token==PCLOSE){
+					i=true;
+								}
+				else{iscol();}
 
 
+}
 
+}
+
+return i;
+}
+
+/***************** drop_index_statement::=  DROP INDEX [ IF EXISTS ] index_name; ******************/
+boolean drop_index_statement(){
+	boolean drin=false;
+	
+		if(token==INDEX){
+			token=_lire_token();
+			if(token==IF){
+			token=_lire_token();
+			if(token==EXISTS){
+				token=_lire_token();
+			if(token==UNQUOTED_NAME){
+				
+				token=_lire_token();
+					if(token==PVIRG)
+						{	
+							drin=true;}			
+					}
+				}
+
+				}
+				else{
+						if(token==UNQUOTED_NAME){
+				
+						token=_lire_token();
+							if(token==PVIRG)
+						{	
+							drin=true;}			
+					}
+				}				
+			
+		}		
+		
+	
+
+return drin;	
+}
+/**************drop_materialized_view_statement ::=  DROP MATERIALIZED VIEW [ IF EXISTS ] view_name;****************/
+boolean drop_materialized_view_statement(){
+	boolean drv=false;
+	
+		if(token==MATERIALIZED){
+			token=_lire_token();
+			if(token==VIEW){
+				token=_lire_token();
+					if(token==IF){
+						token=_lire_token();
+						if(token==EXISTS){
+							token=_lire_token();
+					if(token==UNQUOTED_IDF){
+						token=_lire_token();
+							if(token==PVIRG){
+								drv=true;
+							}
+							}
+						}
+					}
+					else{
+						if(token==UNQUOTED_IDF){
+						token=_lire_token();
+							if(token==PVIRG){
+								drv=true;
+							}
+					}
+					
+			}
+			
+	}
+	
+}
+
+
+return drv;
+}
+/****************** role_name ******************/
+boolean role_name(){
+	boolean rn=false;
+	if(IDF() || token==STRING_TOKEN){
+		rn=true;
+	}
+return rn;
+}
+/**************************  drop_role_statement ::=  DROP ROLE [ IF EXISTS ] role_name ;****************/
+
+boolean drop_role_statement(){
+boolean dr=false;
+
+	if(token==ROLE){
+		token=_lire_token();
+		if(token==IF){
+			token=_lire_token();
+			if(token==EXISTS){
+				token=_lire_token();
+		if(role_name())
+		{	token=_lire_token();
+			if(token==PVIRG){
+				dr=true;
+			}
+			}
+		}
+		}
+		else{
+			if(role_name())
+		{	token=_lire_token();
+			if(token==PVIRG){
+				dr=true;
+			}
+		
+	}
+}
+	
+}
+
+
+return dr;
+}
+/************* drop_user_statement::=  DROP USER [ IF EXISTS ] role_name ;*****************************/
+boolean drop_user_statement(){
+	boolean drus=false;
+	
+		if(token==USER){
+			token=_lire_token();
+			if(token==IF){
+				token=_lire_token();
+				if(token==EXISTS){
+					token=_lire_token();
+			if(role_name())
+			{	token=_lire_token();
+				if(token==PVIRG)
+				{
+					drus=true;
+				}
+				}
+			}
+		}
+		else{
+			if(role_name())
+			{	
+				token=_lire_token();
+				if(token==PVIRG)
+				{
+					drus=true;
+				}
+				}
+		}
+		}
+		
+		
+	
+	
+return drus;
+}
+/************** arguments_signature ****************/
+boolean arguments_signature(){
+	boolean arg=false;
+	int p=1;
+	if(cql_type()){
+		token=_lire_token();
+		while(p==1){
+			if(token==VIRG){
+			token=_lire_token();
+			if(cql_type()){
+				token=_lire_token();
+				if(token==PCLOSE){
+					arg=true;
+					p=0;
+				}
+				else{p=1;}
+			}
+			else{p=0;}
+		}
+		else if(token==PCLOSE){
+			arg=true;p=0;
+		}
+		else{p=0;}
+	}
+}
+
+return arg;
+}
+/***************table_name_funct*************************/
+boolean table_name_funct(){
+	boolean tab=false;
+	if(name())
+		{token=_lire_token()
+			if(token==POINT)
+				{token=_lire_token();
+					if(name())
+						{
+							token=_lire_token();
+							if(token==POPEN){
+								token=_lire_token();
+							if(arguments_signature()){
+								
+									token=_lire_token();
+									if(token==PVIRG){
+									tab=true;
+													}
+												}
+											}
+
+					else{if(token==PVIRG)
+						{printf(";\n");
+							tab=true;
+				
+							}					
+						
+				}
+							}
+
+						}
+	
+				else{	if(token==POPEN){
+								token=_lire_token();
+							if(arguments_signature()){
+								
+									token=_lire_token();
+									if(token==PVIRG){
+									tab=true;
+													}
+												}
+											}
+										
+							
+									
+			else{if(token==PVIRG)
+						{printf(";\n");
+							tab=true;
+				
+							}					
+						
+				}
+				
+	}
+	
+}	
+return tab;
+}
+
+/***********************drop_function_statement::=  DROP FUNCTION [ IF EXISTS ] function_name [ '(' arguments_signature ')' ];*****************************/
+boolean drop_function_statement(){
+	boolean drfc=false;
+	
+		if(token==FUNCTION){
+			token=_lire_token();
+			if(token==IF){
+				token=_lire_token();
+				if(token==EXISTS){
+					token=_lire_token();
+			if(table_name_funct()){
+				drfc=true;
+				
+						
+					}
+					
+				}
+				
+			}
+			else{
+				if(table_name_funct()){
+				drfc=true;
+						
+					}
+			}
+			
+		}
+		
+	
+	
+	return drfc;
+}
+/***********************drop_aggregate_statement ::=  DROP AGGREGATE [ IF EXISTS ] function_name [ '(' arguments_signature ')' ];*****************************/
+boolean drop_aggregate_statement(){
+	boolean dragg=false;
+	
+		if(token==AGGREGATE){
+			token=_lire_token();
+			if(token==IF){
+				token=_lire_token();
+				if(token==EXISTS){
+					token=_lire_token();
+					if(table_name_funct()){
+				
+								dragg=true;
+							}
+							}
+						}
+					
+			else{
+				if(table_name_funct()){
+				
+								dragg=true;
+							}
+							}
+						}
+						
+						
+					
+
+	
+	return dragg;
+}
+/******************* drop() ****************************/
+boolean drop(){
+	boolean drp=false;
+	if(token==DROP){
+		token=_lire_token();
+		if(token==KEYSPACE) drp=drop_keyspace_statement();
+		if(token==TABLE)	drp=drop_table_statement();
+		if(token==INDEX)	drp=drop_index_statement();
+		if(token==MATERIALIZED) drp=drop_materialized_view_statement();
+		if(token==ROLE)		drp=drop_role_statement();
+		if(token==USER)		drp=drop_user_statement();
+		if(token==FUNCTION)	drp=drop_function_statement();
+		if(token==AGGREGATE) drp=drop_aggregate_statement();	
+		}
+		return drp;
+}
+
+/*************************main *************************************************/
 int main(){
 	boolean d;
 	token=_lire_token();
-	d=literal();
+	d=drop();
 	if(d==true){printf("good\n");}
 	else {printf("nope\n");}
 	return 0;

@@ -1,2 +1,0 @@
-CREATE TABLE users (password varchar,gender varchar,session_token varchar,state varchar,birth_year bigint);
-CREATE KEYSPACE IF NOT EXISTS "Excalibur" WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : 3, 'dc2' : 2};

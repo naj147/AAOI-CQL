@@ -18,12 +18,11 @@ string ['][^']*([']{2})*[^']*[']
 %%
 ["/"]["/"][ ]*[^\n]*		{}
 ["\-"]["\-"][^\n]*		{}
-["/"]["*"][^]*[\n]*[^]*["*"]["/"]   {}       
-
+["/"]["*"][^]*[\n]*[^]*["*"]["/"]   {}     
 "ALTER"				{return ALTER;}                                                                                
 "WITH REPLICATION"		{return WITH_REPLICATION;}
 "WITH"				{return WITH;}
-"DURABLE_WRITES"		{return DURABLE_WRITES;}                                                                              
+"DURABLE_WRITES"		{return DURABLE_WRITES;}
 "DELETE"			{ return DELETE;}
 "CREATE"			{ return CREATE;}
 "PUT"				{ return PUT;}
@@ -51,6 +50,7 @@ string ['][^']*([']{2})*[^']*[']
 "float"			        { return FLOAT;}
 "inet"			        { return INET;}
 "int"			        { return INT;}
+"bigint"			{ return BIGINT;}//j'ai ajouté big int 5/12/2016
 "blob"					{return BLOB;}
 "string"				 {return STRING;}
 "smallint"			{ return SMALLINT;}
@@ -70,17 +70,8 @@ string ['][^']*([']{2})*[^']*[']
 "tuple"				{ return TUPLE;}
 "true"				{ return TRUE;}
 "false"				{ return FALSE;}
-"ttl"				{ return TTL;}
-"using"				{ return USING;}
 {num}				{ return INUMBER;}
-"KEY"				{return KEY;}	
-"VIEW"				{return VIEW;}	
-"ROLE"				{return ROLE;}
-"USER"				{return USER;}
-"USE"				{return USE;}
-"FUNCTION"			{return FUNCTION;}
-"MATERIALIZED"		{return MATERIALIZED;}
-"AGGREGATE"			{return AGGREGATE;}
+
 {float}				{ return DNUMBER;}
 {uuid}				{ return UUID_TOKEN;}
 
@@ -89,7 +80,7 @@ string ['][^']*([']{2})*[^']*[']
 {quoted_identifier}		{return QUOTED_IDF;}
 {string}			{return STRING_TOKEN;}
 ":"				{ return TWOP;}
-"?"					{return QST;}
+"?"				{return QST;}
 "\'"				{ return APOST;}
 ","				{ return VIRG;}
 ";"				{ return PVIRG;}
@@ -101,10 +92,8 @@ string ['][^']*([']{2})*[^']*[']
 "["				{return CROPEN;}
 "]"				{return CRCLOSE;}
 "<"			        { return LESSER;}
-"!="				{return DIFF;}
-">="				{return BIGGEREQ;}
-"<="				{return LESSEREQ;}
 ">"			        { return BIGGER;}
+"="				{return EQ;}
 [\n]				{return ENTER;}
 [ \t\n]		        	/* caractère vide */
 .				{return ERRORLEX;}

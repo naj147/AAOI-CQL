@@ -1,14 +1,12 @@
 
 
-typedef enum { QUOTED_IDF,UNQUOTED_IDF,UNQUOTED_NAME,QUOTED_NAME,INDEX_NAME,VIEW,VIEW_NAME,MATERIALIZED,USE,USER,ROLE,FUNCTION,IN,CONTAINS,AGGREGATE,BIGGEREQ,LESSEREQ,DIFF,
-CREATE, INSERT, UPDATE, DELETE, INTO, DROP, ALTER, SET, WHERE,WITH,DURABLE_WRITES,WITH_REPLICATION, FROM,VALUES, IF, EXISTS,BATCH, BEG_IN, PUT,RENAME,KEYSPACE,SCHEMA,TABLE,NOT_EXISTS,AND, APPLY, EQ,ADD, MINUS, PLUS, MULT, DIV,INDEX, ASCII,BIGINT,BLOB, COUNTER,DECIMAL,DOUBLE,FLOAT,INET,INT,TEXT,TIMEUUID,UUID,INUMBER, DNUMBER,STRING,BLOB_TOKEN,UUID_TOKEN,
-VARCHAR,VARINT,LIST, MAP,SET_T,TUPLE,DESCRIBE,TYPE,TYPES,PRIMARY_KEY,ALL,KEY,POPEN,PCLOSE,BOPEN,BCLOSE,VIRG,PVIRG,LESSER,TTL,TIMESTAMP,
-BIGGER,TWOP,ACOLO,ACOLF,CROPEN,CRCLOSE,ENTER,POINT,USING,QST,TRUE,APOST,SET_LIT,MAP_LIT,UDT_LIT,FALSE,TO_TOKEN ,SELECT,HEX,BOOLEAN,SMALLINT,DATE,ERRORLEX,TIME,TINYINT,STRING_TOKEN} typetoken; 
+typedef enum { QUOTED_IDF,UNQUOTED_IDF,
+CREATE, INSERT, UPDATE, DELETE, INTO, DROP, ALTER, SET, WHERE,WITH,WITH_REPLICATION,DURABLE_WRITES, FROM,VALUES, IF, EXISTS,BATCH, BEG_IN, PUT,RENAME,KEYSPACE,SCHEMA,TABLE,NOT_EXISTS,AND, APPLY, EQ,ADD, MINUS, PLUS, MULT, DIV,INDEX, ASCII,BIGINT,BLOB, COUNTER,DECIMAL,DOUBLE,FLOAT,INET,INT,TEXT,TIMESTAMP,TIMEUUID,UUID,INUMBER, DNUMBER,STRING,BLOB_TOKEN,UUID_TOKEN,
+VARCHAR,VARINT,LIST, MAP,SET_T,TUPLE,DESCRIBE,TYPE,TYPES,PRIMARY_KEY,ALL,POPEN,PCLOSE,BOPEN,BCLOSE,VIRG,PVIRG,LESSER,
+BIGGER,TWOP,ACOLO,ACOLF,CROPEN,CRCLOSE,ENTER,POINT,QST,TRUE,APOST,SET_LIT,MAP_LIT,UDT_LIT,FALSE,TO_TOKEN ,SELECT,HEX,BOOLEAN,SMALLINT,DATE,ERRORLEX,TIME,TINYINT,STRING_TOKEN} typetoken; 
  
 typedef enum{false=0,true=1}boolean;
 
-typetoken token;
-extern int yylex();
 boolean native_type();
 boolean collection_type();
 boolean tuple_type();
@@ -86,21 +84,14 @@ boolean field_definition();
 boolean is_alt();
 boolean is_udt();
 boolean drop_type_statement();
-//boolean tuple_names_aux();
+boolean istuple();
+boolean istuplit();
+boolean tuple_names_aux();
 boolean keyspace_name();
 typetoken mapset_literal();
+typetoken _lire_token();
+boolean create_key_space();
+boolean tuple_type();
 boolean tuple_type_aux();
 boolean tuple_literal_aux();
-boolean names_values();
-boolean _names();
-boolean tuple_names_aux();
-boolean update_parameter();
-boolean update_parameter_aux();
-boolean _using_parameter();
-boolean insert_statement();
-boolean iscol();
-boolean operateur();
-boolean using_delete();
-boolean update_parametre();
-boolean simple_selection();
-boolean table_name_funct();
+extern char *yytext;

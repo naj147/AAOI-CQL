@@ -4,7 +4,8 @@
 #include<string.h>
 
 
-//extern int yylex(); 
+extern int yylex(); 
+typetoken token;
 boolean follow_token=false;
 typetoken _lire_token(){ 
 	if(follow_token){
@@ -55,6 +56,69 @@ boolean native_type(){
 		else if(token==UUID){native=true;}
 		else if(token==VARCHAR){native=true;}
 		else if(token==VARINT){native=true;}
+/* switch(token) {
+case ASCII :
+	return true;
+	break;
+case BIGINT:
+	return true;
+	break;
+case BOOLEAN :
+	return true;
+	break;
+case COUNTER :
+	return true;
+	break;
+case DATE :
+	return true;
+	break;
+case DECIMAL :
+	return true;
+	break;
+case DOUBLE :
+	return true;
+	break;
+case FLOAT :
+	return true;
+	break;
+case INET :
+	return true;
+	break;
+case INT :
+	return true;
+	break;
+case SMALLINT :
+	return true;
+	break;
+case TEXT :
+	return true;
+	break;
+case TIME :
+	return true;
+	break;
+case TIMESTAMP :
+	return true;
+	break;
+case TIMEUUID :
+	return true;
+	break;
+case TINYINT :
+	return true;
+	break;
+case UUID :
+	return true;
+	break;
+case VARCHAR :
+	return true;
+	break;
+case VARINT :
+	return true;
+	break;
+default : 
+	return false;
+	break;
+}
+*/
 		
 		return native;
 
@@ -152,7 +216,7 @@ boolean type_hint(){
 			token=_lire_token();
 			if(cql_type()){
 				token=_lire_token();
-				if(token==PCLOSE){
+				if(token=PCLOSE){
 					hint=true;
 				}
 			}
@@ -341,7 +405,7 @@ boolean  collection_literal(){
 		{printf("hani hna map");
 		collit=true;
 		}
-	else if(c==UDT_LIT){collit=true;}
+	else if(c=UDT_LIT){collit=true;}
 	else if(list_literal()){
 		printf("hani hna");
 		collit=true;
@@ -412,6 +476,8 @@ typetoken mapset_literal(){
         }
 		return mapset;
 }
+
+
 
 /*
 //udt_literal ::=  '{' identifier ':' term is_udt
@@ -497,9 +563,9 @@ boolean tuple_type_aux(){
 //tuple_literal ::=  '(' term ( ',' term )* ')'
 boolean tuple_literal(){
   boolean tup=false;
-  if(token==POPEN){printf("("); 
+  if(token==POPEN){ 
   	token=_lire_token();
-  	if(term()){ printf("term");
+  	if(term()){ 
   		token=_lire_token();
   		tup=tuple_literal_aux();
   	}
@@ -509,177 +575,18 @@ boolean tuple_literal(){
 //tuple_literal_aux ::= ,term | )
 boolean tuple_literal_aux(){
 	boolean ttp=false;
-	if(token==VIRG){ printf(",\n");
+	if(token==VIRG){ 
 		token=_lire_token();
-		if(term()){ printf("t2\n");
+		if(term()){ 
 			token=_lire_token();
 			ttp=tuple_literal_aux();
 		}
 	}
-	else if(token==PCLOSE){ printf(")\n");
+	else if(token==PCLOSE){ 
 		ttp=true;
 	}
 	return ttp;
 }
-
-/*
-int main(){
-	boolean d;
-	token=_lire_token();
-	d=literal();
-	if(d==true){printf("good\n");}
-	else {printf("nope\n");}
-	return 0;
-}*/
-//names_values     ::=  names VALUES tuple_literal
-
-boolean names_values()
-{
-boolean n=false;
-if(_names()){ printf("namesvalid\n");
-   token=_lire_token();
-   if(token==VALUES){ printf("VALUES\n");
-   	token=_lire_token();
-   	if(tuple_literal()) n=true;}
-
-   }
-return n;   
-}
-
-
-//_names ::=  '(' column_name ( ',' column_name )* ')'
-boolean _names()
-{
-  boolean tup=false;
-  if(token==POPEN){printf("(\n" );
-  	token=_lire_token();
-  	if(IDF()){printf("col1\n");
-  		token=_lire_token();
-  		tup=tuple_names_aux();
-  	}
-  }
-  return tup;
-}
-
-//tuple_literal_aux ::= ,term | )
-boolean tuple_names_aux(){
-	boolean ttp=false;
-	if(token==VIRG){ printf(",\n");
-		token=_lire_token();
-		if(IDF()){ printf("column2\n");
-			token=_lire_token();
-			ttp=tuple_names_aux();
-		}
-	}
-	else if(token==PCLOSE){ printf(")\n");
-		ttp=true;
-	}
-	return ttp;
-}
-
-
-
-
-//update_parameter ::=  ( TIMESTAMP | TTL ) ( integer | bind_marker )
-boolean update_parameter()
-{
-	boolean up=false;
-	if(token==TIMESTAMP||token==TTL){
-		token=_lire_token();
-		if(bind_marker()||token==INUMBER) up=true;
-	}
-	return up;
-}
-
-
-
-//update_parameter_aux::= ( AND update_parameter )* || ';'
-boolean update_parameter_aux()
-{
-	boolean up=false;
-	if(token==AND){
-		token=_lire_token();
-		if(update_parameter()) {token=_lire_token(); up=update_parameter_aux();}
-	}
-	else if(token==PVIRG){ follow_token=true;up=true;}
-	return up;
-}
-
-
-/*   [ USING update_parameter ( AND update_parameter )* ] */
-boolean _using_parameter()
-{
-	boolean up=false;
-	if(token==USING){
-		 token=_lire_token();
-		 if(update_parameter())
-		 	token=_lire_token();
-		 	up=update_parameter_aux();
-	}
-
-
-}
-
-/*insert_statement ::=  INSERT INTO table_name ( names_values | json_clause )
-                      [ IF NOT EXISTS ]
-                      [ USING update_parameter ( AND update_parameter )* ]
-                      */
-
-boolean insert_statement()
-{
-	boolean ins=false;
-	if(token==INSERT){ printf("insert\n");
-		token=_lire_token();
-		if(token==INTO){printf("into\n");
-			token=_lire_token();
-			if (IDF())
-			{
-				token=_lire_token();
-			
-				if(names_values()){printf("columns\n");
-				token=_lire_token();
-				if(token==IF){
-					token=_lire_token();
-					if(token==NOT_EXISTS)
-					{
-						token=_lire_token();
-						if(token==USING)
-						{
-							follow_token=true;
-							token=_lire_token();
-							ins=_using_parameter();
-						}
-						else if(token==PVIRG) ins=true;
-					}
-				}
-				else if(token==USING)
-						{
-							follow_token=true;
-							token=_lire_token();
-							ins=_using_parameter();
-						}
-				else if(token==PVIRG||token==ENTER) {printf(";");ins=true;}
-
-			}
-		}
-	}}
-    return ins;
-}
-
-//INSERT
-/*
-insert_statement ::=  INSERT INTO table_name ( names_values | json_clause )
-                      [ IF NOT EXISTS ]
-                      [ USING update_parameter ( AND update_parameter )* ]
-names_values     ::=  names VALUES tuple_literal
-json_clause      ::=  JSON string [ DEFAULT ( NULL | UNSET ) ]
-names            ::=  '(' column_name ( ',' column_name )* ')'
-column_name :: = idf */
-
-
-
-
-
 
 
 /*
@@ -734,6 +641,18 @@ if(token==ALTER){
 return false;
 }
 
+
+
+// if_existing : IF NOT EXISTS
+boolean if_existing(){
+if(token==IF){
+			token=_lire_token();
+			if(token==NOT_EXISTS)
+				return true;
+}
+return false;
+}
+
 /*
 CREATE ( KEYSPACE | SCHEMA ) IF NOT EXISTS IDF
 WITH REPLICATION = map_lit
@@ -741,15 +660,9 @@ AND DURABLE_WRITES = boolean */
 
 
 
-boolean create_key_space(){
 
-	if(token==KEYSPACE || token==SCHEMA){
-		token=_lire_token();
-		if(token==IF){
-			token=_lire_token();
-			if(token==NOT_EXISTS){
-				token=_lire_token();
-				if(IDF()){
+boolean Keyspace_aux(){
+		if(IDF()){
 					token=_lire_token();
 					if(token==WITH_REPLICATION){
 						token=_lire_token();
@@ -771,7 +684,9 @@ boolean create_key_space(){
 												
 											}
 										}
-									}							
+									}
+									else if(token==PVIRG)
+													return true;					
 								}
 							}
 
@@ -779,8 +694,18 @@ boolean create_key_space(){
 						}
 		
 					}
-				}
-			}		
+return false;
+}
+
+boolean create_key_space(){
+
+	if(token==KEYSPACE || token==SCHEMA){
+		token=_lire_token();
+		if(if_existing()){
+			token=_lire_token();
+			return Keyspace_aux();
+			
+			}else return Keyspace_aux();		
 		}
 	
 return false;
@@ -905,7 +830,7 @@ column_name cql_type
 
 
 
-//column_def_aux: cql_type PRI_KEY cql_type | collection_type
+//column_def_aux: cql_type PRIMARY_KEY | collection_type
 
 
 
@@ -913,7 +838,7 @@ column_name cql_type
 boolean column_def_aux(){
 	if(cql_type()){		
 		token=_lire_token();
-		if(pri_key()){
+		if(token==PRIMARY_KEY){
 			return true;
 		}
 		if(token==PCLOSE ||token==VIRG){
@@ -960,655 +885,138 @@ boolean column_definition(){
 return false;
 }
 
+//Keyspace_per_default: idf.idf|idf
+boolean Keyspace_per_default(){
 
+if(IDF()){
+			token=_lire_token();
+					if(token==POINT){
+						//On a specifié un keyspace
+						token=_lire_token();
+						if(IDF())
+							{
+								return true;
+							}
+					}
+					else 
+					 {//keyspace par defaut
+					 		follow_token=true;
+							return true;}
+	}
+return false;
+}
 
+/*create_table_aux_1: keyspace_name.table_name 
+( column_definition, column_definition, ...) */
+boolean create_table_aux_1(){
+if(Keyspace_per_default()){
+							token=_lire_token();
+							if(token==POPEN){
+								token=_lire_token();
+								if(column_definition())
+									return true;
+									
+								
+							}
+	}
+				0
+				return false;
+}
 /*
 CREATE TABLE keyspace_name.table_name 
 ( column_definition, column_definition, ...)
 WITH property AND property ...(pour l'instant j'ai pas fait cette ligne)
 
 */
+//with_property_aux: AND with_property_aux | ;
+boolean
 
-boolean create_table_aux(){
-if(IDF()){
-					token=_lire_token();
-					if(token==POINT){
-						token=_lire_token();
-						if(IDF()){
-							token=_lire_token();
-							if(token==POPEN){
-								token=_lire_token();
-								if(column_definition())
-								{	token=_lire_token();
-									if(token==PCLOSE)
-									{printf("WTF");
-										token=_lire_token();
-										if(token==PVIRG){
-										return true;}
-									}
-								}
-							}
-						}
-					}
-				}
-return false;
 
-}
+
+
+//with_property : with property with_property_aux | ;
+
 
 boolean create_table(){
 
 	if(token==TABLE){
 		token=_lire_token();
-		if(token==IF){
-			token=_lire_token();
-			if(token==NOT_EXISTS){
+			if(if_existing()){
 				token=_lire_token();
-				return create_table_aux();
+				if(create_table_aux_1()){
+					token=_lire_token();
+					if(token==PCLOSE)
+					{
+						return true;
+					}
+				}
+			}else  
+				if(create_table_aux_1()){
 				
-			}
+					token=_lire_token();
+					if(token==PCLOSE)
+					{
+						return true;
+					}
+				}
 		}
-		else  if(IDF()){
-			return create_table_aux();}
-		
-	}
-return false;
-
-
+	
+	return false;
 }
 
+//create_table_keyspace : CREATE TABLE create_table() | CREATE KEYSPACE create_key_space()
 boolean create_table_keyspace(){
+	boolean response=false;
 if(token==CREATE){
 	token=_lire_token();
 	if(token==TABLE)
-		return create_table();
-	else if(token==KEYSPACE||token==SCHEMA)
-		return create_key_space();
-
-}
-return false;
-}
-
-/******************** name *************/
-boolean name(){
-							
-							boolean name=false;
-							if(token==QUOTED_IDF){name=true;}
-							else if(token==UNQUOTED_IDF){name=true;}
-							
-							return name;
-							}	
-/****************  drop_keyspace_statement ::=  DROP KEYSPACE [ IF EXISTS ] keyspace_name*************/
-boolean drop_keyspace_statement(){
-				boolean drk=false;
-				
-					if(token=KEYSPACE){
-						token=_lire_token();
-					if(token==IF){
-						token=_lire_token();
-						if(token==EXISTS){
-							token=_lire_token();
-							if(name()){
-								token=_lire_token();
-								if(token==PVIRG){
-									drk=true;
-										}
-										}
-										}	
-						}
-					else {if(name()){
-							token=_lire_token();
-								if(token==PVIRG){
-									drk=true;
-												}	
-										}
-					}
-						
-					}
-				
-				
-return drk;		
-
-}	
-/************ table_name*******************/
-boolean table_name(){
-	boolean tab=false;
-	if(name())
-		{token=_lire_token();
-			if(token==POINT)
-				{token=_lire_token();
-					if(name())
-						{
-							token=_lire_token();
-							if(token==PVIRG)
-								{tab=true;
-								}
-								
-						}
-						
-				}
-		if(token==PVIRG)
-				{tab=true;
-				
-				}					
+		response=create_table();
+	else if(token==KEYSPACE||token==SCHEMA){
+		response=create_key_space();
 	}
-	
-	
-return tab;
-}
-/************** drop_table_statement::=  DROP TABLE [ IF EXISTS ] table_name;******************/
-boolean drop_table_statement(){
-		boolean drtab=false;
-		
-				if(token==TABLE){
-					token=_lire_token();
-					if(token==IF){
-						token=_lire_token();
-						if(token==EXISTS){
-							token=_lire_token();
-							if(table_name())
-							{	
-										drtab=true;
-								
-						}
-					}
-					}
-					else{
-						if(table_name())
-							{	
-										drtab=true;
-					}	
-				}
-				
-		}
-	
-		
-
-return drtab;		
-}			
-/**************** simple_selection ******************/
-boolean simple_selection(){
-	boolean s=false;
-	if(token!=FROM){
-	if(IDF())
-		{token=_lire_token();
-			if(token==FROM)
-				{s=true;}
-			
-			if(token==VIRG)
-					{
-				token=_lire_token();
-				if(IDF())
-					{if(token==FROM)
-						{s=true;}
-						else{simple_selection();}
-					}
-					
-					}
-			
-		
-			if(token==CROPEN){
-					token=_lire_token();
-					if(term()){
-						token=_lire_token();
-						if(token==CRCLOSE)
-							{token=_lire_token();
-								if(token==FROM)
-									{s=true;}
-								else{simple_selection();}
-							}
-										
-					}
-						
-
-			
-		}
-			if(token==POINT){
-					token=_lire_token();
-						if(name()){
-							if(token==FROM)
-									{s=true;}
-							else{simple_selection();}	
-
-							}							
-											
-					}
-			
-			
-				
-	
 
 }
-else{s=true;}
-return s;
+return response;
 }
+
+
+
+/*//tuple_names_literal ::=  '(' column_name ( ',' column_name )* ')'
+boolean _names()
+{
+  boolean tup=false;
+  if(token==POPEN){printf("(\n" );
+  	token=_lire_token();
+  	if(IDF()){printf("col1\n");
+  		token=_lire_token();
+  		tup=tuple_names_aux();
+  	}
+  }
+  return tup;
 }
-/******************* update_parametre *********************/
-boolean update_parametre(){
-	boolean para=false;
-	if(token==TTL || token==TIMESTAMP)
-	{
+
+//tuple_names_aux ::= , idf | )
+boolean tuple_names_aux(){
+	boolean ttp=false;
+	if(token==VIRG){ printf(",\n");
 		token=_lire_token();
-		if(token==INUMBER || bind_marker())
-		{	para=true;
+		if(IDF()){ printf("column2\n");
+			token=_lire_token();
+			ttp=tuple_names_aux();
 		}
-		
 	}
-	
-return para;	
-
-}
-/******************** using_delete ******************/
-boolean using_delete(){
-boolean us=false;
-int  p=1;
-if(token==USING){
-	token=_lire_token();
-	if(update_parametre())
-	{
-		while(p==1){
-			token=_lire_token();
-			if(token==AND){
-				token=_lire_token();
-				if(update_parametre()){
-					token=_lire_token();
-					if(token==WHERE)
-					{p==0;us=true;
-
-					}
-					else{p=1;}
-				}
-				else{p=0;}
-			}
-			else if(token==WHERE){
-				p=0;us=true;
-			}
-			else{p=0;}
-		}
-
+	else if(token==PCLOSE){ printf(")\n");
+		ttp=true;
 	}
-	
+	return ttp;
 }
-	
-return us;
-}
-/*******************operateur ********************/
-boolean operateur(){
-boolean op=false;
-if(token==BIGGEREQ || token==LESSEREQ || token==DIFF || token==LESSER || token==BIGGER || token==CONTAINS || token==IN){
-op=true;
-}
-if(token==CONTAINS){
-	token=_lire_token();
-		if(token==KEY){
-			op=true;
-		}
-}
-return op;
-
-}
-/************************ ( ',' column_name )*  ************************/
-boolean iscol(){
-	boolean i=false;
-	if(token==VIRG){
-		token=_lire_token();
-			if(IDF()){
-				token=_lire_token();
-				if(token==PCLOSE){
-					i=true;
-								}
-				else{iscol();}
-
-
-}
-
-}
-
-return i;
-}
-
-/***************** drop_index_statement::=  DROP INDEX [ IF EXISTS ] index_name; ******************/
-boolean drop_index_statement(){
-	boolean drin=false;
-	
-		if(token==INDEX){
-			token=_lire_token();
-			if(token==IF){
-			token=_lire_token();
-			if(token==EXISTS){
-				token=_lire_token();
-			if(token==UNQUOTED_NAME){
-				
-				token=_lire_token();
-					if(token==PVIRG)
-						{	
-							drin=true;}			
-					}
-				}
-
-				}
-				else{
-						if(token==UNQUOTED_NAME){
-				
-						token=_lire_token();
-							if(token==PVIRG)
-						{	
-							drin=true;}			
-					}
-				}				
-			
-		}		
-		
-	
-
-return drin;	
-}
-/**************drop_materialized_view_statement ::=  DROP MATERIALIZED VIEW [ IF EXISTS ] view_name;****************/
-boolean drop_materialized_view_statement(){
-	boolean drv=false;
-	
-		if(token==MATERIALIZED){
-			token=_lire_token();
-			if(token==VIEW){
-				token=_lire_token();
-					if(token==IF){
-						token=_lire_token();
-						if(token==EXISTS){
-							token=_lire_token();
-					if(token==UNQUOTED_IDF){
-						token=_lire_token();
-							if(token==PVIRG){
-								drv=true;
-							}
-							}
-						}
-					}
-					else{
-						if(token==UNQUOTED_IDF){
-						token=_lire_token();
-							if(token==PVIRG){
-								drv=true;
-							}
-					}
-					
-			}
-			
-	}
-	
-}
-
-
-return drv;
-}
-/****************** role_name ******************/
-boolean role_name(){
-	boolean rn=false;
-	if(IDF() || token==STRING_TOKEN){
-		rn=true;
-	}
-return rn;
-}
-/**************************  drop_role_statement ::=  DROP ROLE [ IF EXISTS ] role_name ;****************/
-
-boolean drop_role_statement(){
-boolean dr=false;
-
-	if(token==ROLE){
-		token=_lire_token();
-		if(token==IF){
-			token=_lire_token();
-			if(token==EXISTS){
-				token=_lire_token();
-		if(role_name())
-		{	token=_lire_token();
-			if(token==PVIRG){
-				dr=true;
-			}
-			}
-		}
-		}
-		else{
-			if(role_name())
-		{	token=_lire_token();
-			if(token==PVIRG){
-				dr=true;
-			}
-		
-	}
-}
-	
-}
-
-
-return dr;
-}
-/************* drop_user_statement::=  DROP USER [ IF EXISTS ] role_name ;*****************************/
-boolean drop_user_statement(){
-	boolean drus=false;
-	
-		if(token==USER){
-			token=_lire_token();
-			if(token==IF){
-				token=_lire_token();
-				if(token==EXISTS){
-					token=_lire_token();
-			if(role_name())
-			{	token=_lire_token();
-				if(token==PVIRG)
-				{
-					drus=true;
-				}
-				}
-			}
-		}
-		else{
-			if(role_name())
-			{	
-				token=_lire_token();
-				if(token==PVIRG)
-				{
-					drus=true;
-				}
-				}
-		}
-		}
-		
-		
-	
-	
-return drus;
-}
-/************** arguments_signature ****************/
-boolean arguments_signature(){
-	boolean arg=false;
-	int p=1;
-	if(cql_type()){
-		token=_lire_token();
-		while(p==1){
-			if(token==VIRG){
-			token=_lire_token();
-			if(cql_type()){
-				token=_lire_token();
-				if(token==PCLOSE){
-					arg=true;
-					p=0;
-				}
-				else{p=1;}
-			}
-			else{p=0;}
-		}
-		else if(token==PCLOSE){
-			arg=true;p=0;
-		}
-		else{p=0;}
-	}
-}
-
-return arg;
-}
-/***************table_name_funct*************************/
-boolean table_name_funct(){
-	boolean tab=false;
-	if(name())
-		{token=_lire_token();
-			if(token==POINT)
-				{token=_lire_token();
-					if(name())
-						{
-							token=_lire_token();
-							if(token==POPEN){
-								token=_lire_token();
-							if(arguments_signature()){
-								
-									token=_lire_token();
-									if(token==PVIRG){
-									tab=true;
-													}
-												}
-											}
-
-					else{if(token==PVIRG)
-						{printf(";\n");
-							tab=true;
-				
-							}					
-						
-				}
-							}
-
-						}
-	
-				else{	if(token==POPEN){
-								token=_lire_token();
-							if(arguments_signature()){
-								
-									token=_lire_token();
-									if(token==PVIRG){
-									tab=true;
-													}
-												}
-											}
-										
-							
-									
-			else{if(token==PVIRG)
-						{printf(";\n");
-							tab=true;
-				
-							}					
-						
-				}
-				
-	}
-	
-}	
-return tab;
-}
-
-/***********************drop_function_statement::=  DROP FUNCTION [ IF EXISTS ] function_name [ '(' arguments_signature ')' ];*****************************/
-boolean drop_function_statement(){
-	boolean drfc=false;
-	
-		if(token==FUNCTION){
-			token=_lire_token();
-			if(token==IF){
-				token=_lire_token();
-				if(token==EXISTS){
-					token=_lire_token();
-			if(table_name_funct()){
-				drfc=true;
-				
-						
-					}
-					
-				}
-				
-			}
-			else{
-				if(table_name_funct()){
-				drfc=true;
-						
-					}
-			}
-			
-		}
-		
-	
-	
-	return drfc;
-}
-/***********************drop_aggregate_statement ::=  DROP AGGREGATE [ IF EXISTS ] function_name [ '(' arguments_signature ')' ];*****************************/
-boolean drop_aggregate_statement(){
-	boolean dragg=false;
-	
-		if(token==AGGREGATE){
-			token=_lire_token();
-			if(token==IF){
-				token=_lire_token();
-				if(token==EXISTS){
-					token=_lire_token();
-					if(table_name_funct()){
-				
-								dragg=true;
-							}
-							}
-						}
-					
-			else{
-				if(table_name_funct()){
-				
-								dragg=true;
-							}
-							}
-						}
-						
-						
-					
-
-	
-	return dragg;
-}
-/******************* drop() ****************************/
-boolean drop(){
-	boolean drp=false;
-	if(token==DROP){
-		token=_lire_token();
-		if(token==KEYSPACE) drp=drop_keyspace_statement();
-		if(token==TABLE)	drp=drop_table_statement();
-		if(token==INDEX)	drp=drop_index_statement();
-		if(token==MATERIALIZED) drp=drop_materialized_view_statement();
-		if(token==ROLE)		drp=drop_role_statement();
-		if(token==USER)		drp=drop_user_statement();
-		if(token==FUNCTION)	drp=drop_function_statement();
-		if(token==AGGREGATE) drp=drop_aggregate_statement();	
-		}
-		return drp;
-}
-boolean us_e (){
-
-	if(IDF())
-		return true;
-	}
-
-boolean Analyse_syntaxique(){
-if(token==INSERT){
-	return insert_statement();}
-if(token==DROP){
-	return drop();}
-if(token==CREATE){
-	return create_table_keyspace();}
-if(token==USE){token=_lire_token();
-return us_e();
-		}
-return false;
-}
-
-
+*/
 
 int main(){
 	boolean d;
 	token=_lire_token();
-	d=Analyse_syntaxique();
-	if(d==true){printf("it works\n");}
-	else{printf("it doesn't\n");}
+	d=create_table_keyspace();
+	if(d==true){printf("good\n");}
+	else {printf("nope\n");}
+	return 0;
 }
-

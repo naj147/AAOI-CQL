@@ -1,2 +1,7 @@
 CREATE TABLE users (password varchar,gender varchar,session_token varchar,state varchar,birth_year bigint);
 CREATE KEYSPACE IF NOT EXISTS "Excalibur" WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : 3, 'dc2' : 2};
+ALTER KEYSPACE "Excalibur" WITH REPLICATION ={ 'class' : 'SimpleStrategy', 'replication_factor' : 3 } with durable_writes = true;
+ALTER TABLE users ALTER bio TYPE text;
+ALTER TABLE addamsFamily ADD gravesite varchar;
+ALTER TABLE users ADD top_places list<text>;
+ALTER TABLE addamsFamily DROP gender;

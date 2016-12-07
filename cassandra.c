@@ -597,8 +597,7 @@ WITH REPLICATION = map
 AND ( DURABLE_WRITES = ( true | false )) */
 
 boolean alter_key_space(){
-if(token==ALTER){
-	token=_lire_token();
+
 	if(token==KEYSPACE || token==SCHEMA){
 		token=_lire_token();
 		if(IDF()){
@@ -609,7 +608,7 @@ if(token==ALTER){
 					token=_lire_token();
 					if(map_literal()){
 					token=_lire_token();								
-					if(token==WITH){
+					if(token==AND){
 					token=_lire_token();
 					while(token==DURABLE_WRITES){
 						token=_lire_token();
@@ -619,8 +618,6 @@ if(token==ALTER){
 								token=_lire_token();
 								if(token==PVIRG)
 									return true;
-								else if(token==AND)
-									token=_lire_token();
 								}
 								
 							}
@@ -632,12 +629,28 @@ if(token==ALTER){
 					}
 
 
+				}else if(token==WITH) {
+					token=_lire_token();
+					while(token==DURABLE_WRITES){
+						token=_lire_token();
+						if(token==EQ){
+							token=_lire_token();
+							if(token==TRUE || token==FALSE){
+								token=_lire_token();
+								if(token==PVIRG)
+									return true;
+								
+								}
+								
+							}
+						}
+					
 				}
 		
 			}
 					
 		}
-	}
+	
 return false;
 }
 
@@ -919,7 +932,7 @@ if(Keyspace_per_default()){
 								
 							}
 	}
-				0
+				
 				return false;
 }
 /*
@@ -929,7 +942,7 @@ WITH property AND property ...(pour l'instant j'ai pas fait cette ligne)
 
 */
 //with_property_aux: AND with_property_aux | ;
-boolean
+//boolean
 
 
 
@@ -979,6 +992,118 @@ if(token==CREATE){
 return response;
 }
 
+/*ALTER TABLE keyspace_name.table_name instruction
+
+
+| ( WITH property AND property ... )
+
+*/
+//ALTER column_name TYPE cql_type
+boolean alter_table_inst_alter(){
+	if(token==ALTER)
+	{	token=_lire_token();
+		if(IDF()){
+			token=_lire_token();
+			if(token==TYPE){
+				token=_lire_token();
+				if(cql_type())
+					return true;
+			}
+		}
+	}
+return false;
+}
+//ADD column_name cql_type
+
+boolean alter_table_inst_add(){
+		if(token==ADD)
+	{	token=_lire_token();
+		if(IDF()){
+			token=_lire_token();
+				if(cql_type())
+					return true;
+		}
+	}
+return false;
+}
+
+//DROP column_name 
+
+boolean alter_table_inst_drop(){
+		if(token==DROP)
+	{	token=_lire_token();
+		if(IDF())
+					return true;
+	}
+return false;
+}
+
+//RENAME column_name TO column_name 
+boolean alter_table_inst_rename(){
+	if(token==RENAME)
+	{	token=_lire_token();
+		if(IDF()){
+			token=_lire_token();
+				if(token==TO_TOKEN){
+					token=_lire_token();
+					if(IDF())
+						return true;
+				}
+		}
+	}
+return false;
+}
+
+/*instruction is:
+
+ALTER column_name TYPE cql_type
+| ( ADD column_name cql_type )
+| ( DROP column_name )
+| ( RENAME column_name TO column_name )
+| ( WITH property AND property ... )
+*/
+boolean alter_table_instruction(){
+	if( alter_table_inst_add())
+		return true;
+	if( alter_table_inst_alter())
+		return true;
+	if( alter_table_inst_rename())
+		return true;
+	if( alter_table_inst_drop())
+		return true;
+return false;
+}
+
+//ALTER TABLE keyspace_name.table_name instruction ;
+boolean alter_table(){
+	if(token==TABLE){
+				token=_lire_token();
+				if(Keyspace_per_default()){
+					token=_lire_token();
+					if(alter_table_instruction())
+					{	token=_lire_token();
+						if(token==PVIRG)
+						return true;
+					}
+				}
+			
+}
+return false;
+}
+
+boolean alter_table_keyspace(){
+	boolean response=false;
+if(token==ALTER){
+	token=_lire_token();
+	if(token==TABLE)
+		response=alter_table();
+	else if(token==KEYSPACE||token==SCHEMA){
+		response=alter_key_space();
+	}
+
+}
+return response;
+}
 
 
 /*//tuple_names_literal ::=  '(' column_name ( ',' column_name )* ')'
@@ -1015,7 +1140,7 @@ boolean tuple_names_aux(){
 int main(){
 	boolean d;
 	token=_lire_token();
-	d=create_table_keyspace();
+	d=alter_table_keyspace();
 	if(d==true){printf("good\n");}
 	else {printf("nope\n");}
 	return 0;

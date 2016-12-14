@@ -19,11 +19,12 @@ string ['][^']*([']{2})*[^']*[']
 ["/"]["/"][ ]*[^\n]*		{}
 ["\-"]["\-"][^\n]*		{}
 ["/"]["*"][^]*[\n]*[^]*["*"]["/"]   {}       
-
 "ALTER"				{return ALTER;}                                                                                
 "WITH REPLICATION"		{return WITH_REPLICATION;}
 "WITH"				{return WITH;}
-"DURABLE_WRITES"		{return DURABLE_WRITES;}                                                                              
+"DURABLE_WRITES"		{return DURABLE_WRITES;}                             
+
+                                               
 "DELETE"			{ return DELETE;}
 "CREATE"			{ return CREATE;}
 "PUT"				{ return PUT;}
@@ -35,6 +36,10 @@ string ['][^']*([']{2})*[^']*[']
 "RENAME"			{ return RENAME;}
 "KEYSPACE"			{ return KEYSPACE;}	
 "SCHEMA"			{ return SCHEMA;}
+"ALLOW FILTERING"	{return ALLOW;}
+"LIMIT"				{return LIMIT;}
+"PER PARTITION LIMIT"	{return PER;}
+"DISTINCT"			{return DISTINCT;}
 "TABLE"				{return TABLE;}
 "not exists"			{ return NOT_EXISTS;}
 "AND"				{ return AND;}
@@ -72,7 +77,6 @@ string ['][^']*([']{2})*[^']*[']
 "false"				{ return FALSE;}
 "ttl"				{ return TTL;}
 "using"				{ return USING;}
-{num}				{ return INUMBER;}
 "KEY"				{return KEY;}	
 "VIEW"				{return VIEW;}	
 "ROLE"				{return ROLE;}
@@ -81,14 +85,26 @@ string ['][^']*([']{2})*[^']*[']
 "FUNCTION"			{return FUNCTION;}
 "MATERIALIZED"		{return MATERIALIZED;}
 "AGGREGATE"			{return AGGREGATE;}
+"contains"		{return CONTAINS;}
+"contains key"	{return CONT_KEY;}
+"group by"		{return GROUP;}
+"order by"		{return ORDER;}
+"token"			{return TOKEN;}
+"JSON"				{return JSON;}/* lexical dial oussama*/
+"AS"				{return AS;}  //14/12/2016
+"CAST"				{ return CAST;} 
+"COUNT"				{ return COUNT;}
+"ASC"				{return ASC;}
+"DESC"				{return DESC;}
+{num}				{ return INUMBER;}
 {float}				{ return DNUMBER;}
 {uuid}				{ return UUID_TOKEN;}
-
 {blob}				{ return BLOB_TOKEN;}
 {unquoted_identifier}		{ return UNQUOTED_IDF;}
 {quoted_identifier}		{return QUOTED_IDF;}
 {string}			{return STRING_TOKEN;}
 ":"				{ return TWOP;}
+"="				{return EQ;}
 "?"					{return QST;}
 "\'"				{ return APOST;}
 ","				{ return VIRG;}
@@ -105,6 +121,8 @@ string ['][^']*([']{2})*[^']*[']
 ">="				{return BIGGEREQ;}
 "<="				{return LESSEREQ;}
 ">"			        { return BIGGER;}
+"*"				{ return MULT;}
+"+"				{return PLUS;}
 [\n]				{return ENTER;}
 [ \t\n]		        	/* caractère vide */
 .				{return ERRORLEX;}

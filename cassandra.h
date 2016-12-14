@@ -1,9 +1,10 @@
 
 
 typedef enum { QUOTED_IDF,UNQUOTED_IDF,UNQUOTED_NAME,QUOTED_NAME,INDEX_NAME,VIEW,VIEW_NAME,MATERIALIZED,USE,USER,ROLE,FUNCTION,IN,CONTAINS,AGGREGATE,BIGGEREQ,LESSEREQ,DIFF,
-CREATE, INSERT, UPDATE, DELETE, INTO, DROP, ALTER, SET, WHERE,WITH,DURABLE_WRITES,WITH_REPLICATION, FROM,VALUES, IF, EXISTS,BATCH, BEG_IN, PUT,RENAME,KEYSPACE,SCHEMA,TABLE,NOT_EXISTS,AND, APPLY, EQ,ADD, MINUS, PLUS, MULT, DIV,INDEX, ASCII,BIGINT,BLOB, COUNTER,DECIMAL,DOUBLE,FLOAT,INET,INT,TEXT,TIMEUUID,UUID,INUMBER, DNUMBER,STRING,BLOB_TOKEN,UUID_TOKEN,
+CREATE, INSERT, UPDATE, DELETE, INTO, MULT, PLUS, DROP, ALTER, SET, WHERE,WITH,DURABLE_WRITES,WITH_REPLICATION, FROM,VALUES, IF, EXISTS,BATCH, BEG_IN, PUT,RENAME,KEYSPACE,SCHEMA,TABLE,NOT_EXISTS,AND, APPLY, EQ,ADD, MINUS,DIV,INDEX, ASCII,BIGINT,BLOB, COUNTER,DECIMAL,DOUBLE,FLOAT,INET,INT,TEXT,TIMEUUID,UUID,INUMBER, DNUMBER,STRING,BLOB_TOKEN,UUID_TOKEN,
 VARCHAR,VARINT,LIST, MAP,SET_T,TUPLE,DESCRIBE,TYPE,TYPES,PRIMARY_KEY,ALL,KEY,POPEN,PCLOSE,BOPEN,BCLOSE,VIRG,PVIRG,LESSER,TTL,TIMESTAMP,
-BIGGER,TWOP,ACOLO,ACOLF,CROPEN,CRCLOSE,ENTER,POINT,USING,QST,TRUE,APOST,SET_LIT,MAP_LIT,UDT_LIT,FALSE,TO_TOKEN ,SELECT,HEX,BOOLEAN,SMALLINT,DATE,ERRORLEX,TIME,TINYINT,STRING_TOKEN} typetoken; 
+BIGGER,TWOP,ACOLO,ACOLF,CROPEN,CRCLOSE,ENTER,POINT,USING,QST,TRUE,APOST,SET_LIT,MAP_LIT,UDT_LIT,FALSE,TO_TOKEN ,SELECT,HEX,BOOLEAN,SMALLINT,DATE,ERRORLEX,TIME,TINYINT,STRING_TOKEN,
+GROUP,ORDER,TOKEN,PER,LIMIT,CONT_KEY,ALLOW,/*TOKENS OUSSAMA 14/12/2016*/DISTINCT,JSON,AS,CAST,COUNT,ASC,DESC} typetoken; 
  
 typedef enum{false=0,true=1}boolean;
 
@@ -100,7 +101,40 @@ boolean _using_parameter();
 boolean insert_statement();
 boolean iscol();
 boolean operateur();
-boolean using_delete();
+//boolean using_delete();
 boolean update_parametre();
-boolean simple_selection();
 boolean table_name_funct();
+boolean relation();
+boolean isrel();
+boolean group_by();
+boolean group_by_clause();
+boolean where();
+boolean where_clause();
+boolean USIN();
+int simple_selection();
+boolean issel();
+boolean isselec();
+boolean selector();
+boolean select_clause();
+boolean isidf();
+boolean allow();
+boolean limit();
+boolean partition();
+boolean order_by();
+boolean  type_imput();
+boolean select_statement();
+boolean column_name();
+boolean table_name();
+boolean name();
+boolean IF_CLAUSE();
+boolean assigement();
+boolean isass();
+boolean iscond();
+boolean isupd();
+boolean update_statement();
+boolean  function_name();
+boolean ascdesc();
+boolean isorder();
+boolean order_by_clause();
+boolean iscolgr();
+boolean operator();

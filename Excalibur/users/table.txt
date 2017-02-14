@@ -1,0 +1,1 @@
+[{"password": "varchar", "gender": "varchar", "session_token": "varchar", "state": "varchar", "birth_year": "bigint", "user_name": "varchar"}, {"user_name": 1}]

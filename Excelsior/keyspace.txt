@@ -1,0 +1,1 @@
+[{"keyspace name": "Excelsior", "class": "'Simplestrategy'", "replication_factor": 3}]

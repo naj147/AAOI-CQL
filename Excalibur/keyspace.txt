@@ -1,0 +1,1 @@
+[{"keyspace name": "Excalibur", "class": "'SimpleStrategy'", "replication_factor": 3}, {"tables": ["users"]}]

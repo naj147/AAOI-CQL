@@ -5,8 +5,57 @@ CREATE, INSERT, UPDATE, DELETE, INTO, MULT, PLUS, DROP, ALTER, SET, WHERE,WITH,D
 VARCHAR,VARINT,LIST, MAP,SET_T,TUPLE,DESCRIBE,TYPE,TYPES,PRIMARY_KEY,ALL,KEY,POPEN,PCLOSE,BOPEN,BCLOSE,VIRG,PVIRG,LESSER,TTL,TIMESTAMP,
 BIGGER,TWOP,ACOLO,ACOLF,CROPEN,CRCLOSE,ENTER,POINT,USING,QST,TRUE,APOST,SET_LIT,MAP_LIT,UDT_LIT,FALSE,TO_TOKEN ,SELECT,HEX,BOOLEAN,SMALLINT,DATE,ERRORLEX,TIME,TINYINT,STRING_TOKEN,
 GROUP,ORDER,TOKEN,PER,LIMIT,CONT_KEY,ALLOW,/*TOKENS OUSSAMA 14/12/2016*/DISTINCT,JSON,AS,CAST,COUNT,ASC,DESC} typetoken; 
- 
+typedef enum{SimpleStr,NTS}class_types;
 typedef enum{false=0,true=1}boolean;
+
+typedef struct data
+{
+
+char * value;
+struct data *next;
+
+}table_data;
+
+typedef struct prim{
+	int partition;//1 : partition key ; 0 : clustering key
+	char *name;
+	table_data * data;
+	struct prim* next;
+}primary;
+
+typedef struct table{
+
+	char* name;
+	char* type;
+	primary* primary;
+	table_data * data;
+	struct table* next;
+
+}table_options;
+
+
+typedef struct tab{
+	char*  keyspace_name;
+	char* name;
+	table_options* fields;
+	struct tab* next;
+}tab_op;
+
+typedef struct keyspace_options{
+		char* name;
+		typetoken durable_writes;
+		boolean class_check;
+		char* class;
+		int replication_factor;
+		int success;
+		tab_op * tables;
+}keyspace_options;
+	
+
+
+
+
+
 
 typetoken token;
 extern int yylex();
@@ -14,8 +63,10 @@ boolean native_type();
 boolean collection_type();
 boolean tuple_type();
 boolean custom_type();
+boolean Keyspace_per_create();
 boolean user_defined_type();
 boolean cql_type();
+boolean map_keyspace();
 boolean IDF();
 boolean _const();
 boolean term();
@@ -138,3 +189,7 @@ boolean isorder();
 boolean order_by_clause();
 boolean iscolgr();
 boolean operator();
+void read_json(char *);
+boolean addTable_Keyspace();
+void write_table();
+void create_json_keyspace();

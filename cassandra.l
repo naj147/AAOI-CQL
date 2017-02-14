@@ -23,8 +23,8 @@ string ['][^']*([']{2})*[^']*[']
 "WITH REPLICATION"		{return WITH_REPLICATION;}
 "WITH"				{return WITH;}
 "DURABLE_WRITES"		{return DURABLE_WRITES;}                             
-
-                                               
+"WHERE"					{return WHERE;}
+"FROM"					{return FROM;}                                        
 "DELETE"			{ return DELETE;}
 "CREATE"			{ return CREATE;}
 "PUT"				{ return PUT;}
@@ -62,6 +62,7 @@ string ['][^']*([']{2})*[^']*[']
 "text"			        { return TEXT;}					
 "to"					{return TO_TOKEN;}
 "time"			        { return TIME;}
+"bigint"			{return BIGINT;}
 "timestamp"			{ return TIMESTAMP;}
 "timeuuid"			{ return TIMEUUID;}
 "tinyint"			{ return TINYINT;}
@@ -123,6 +124,7 @@ string ['][^']*([']{2})*[^']*[']
 ">"			        { return BIGGER;}
 "*"				{ return MULT;}
 "+"				{return PLUS;}
+"-"				{return MINUS;}
 [\n]				{return ENTER;}
 [ \t\n]		        	/* caractère vide */
 .				{return ERRORLEX;}

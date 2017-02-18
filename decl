@@ -1,1 +1,1 @@
-CREATE TABLE Excalibur.users (password varchar ,gender varchar,session_token varchar,state varchar,birth_year bigint,user_name varchar PRIMARY KEY);
+insert into Excalibur.users (password,user_name) values ('122533544as','sqgdsgdfhg1');

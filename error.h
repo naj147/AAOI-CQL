@@ -1,6 +1,6 @@
 
 //TYPE D ERREUR SYMANTIQUE
-typedef enum{KDE,KAE,UK,RE,FDE,PAD,CIR,CIC,CIV,TAE,TDE,TCI,DPK}Semantic_error_type;
+typedef enum{KDE,KAE,UK,RE,FDE,PAD,CIR,CIC,CIV,TAE,TDE,TCI,DPK,APM,ICT}Semantic_error_type;
 
 /*
 if(cu->error==KDE){

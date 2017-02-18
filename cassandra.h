@@ -10,16 +10,13 @@ typedef enum{false=0,true=1}boolean;
 
 typedef struct data
 {
-
 char * value;
 struct data *next;
-
 }table_data;
 
 typedef struct prim{
 	int partition;//1 : partition key ; 0 : clustering key
 	char *name;
-	table_data * data;
 	struct prim* next;
 }primary;
 
@@ -30,9 +27,7 @@ typedef struct table{
 	primary* primary;
 	table_data * data;
 	struct table* next;
-
 }table_options;
-
 
 typedef struct tab{
 	char*  keyspace_name;

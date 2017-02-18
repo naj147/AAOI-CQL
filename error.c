@@ -38,7 +38,7 @@ void afficher_semantic_error(data_error* errors){
 				break;
 			case CIV:
 				printf("\nClass incompatible with elements%d\n",cu->cursor);
-				break;
+				break; 
 			case FDE:
 				printf("\nPrimary key element is not a member %d\n",cu->cursor);
 				break;
@@ -51,6 +51,11 @@ void afficher_semantic_error(data_error* errors){
 			case TDE:
 				printf("\nTable Doesnt Exist%d\n",cu->cursor);
 				break;
+			case APM:
+				printf("\nAll Primary Keys Must Be Mentioned\n");
+				break;
+			case ICT:
+				printf("\nIncompatible Type assigned to the field \n");
 		}
 		cu=cu->next;
 	}

@@ -7,24 +7,12 @@
 extern char* yytext;
 char* prt;
 
-
-
-primary *primarys;
-primary *pr;
-primary * primary_op;
-primary *primary_o;
-table_options* ta;
-
-
-
-
-
-
-
-
+primary *pr=NULL;
+table_options *used=NULL;
 tab_op *tables=NULL;
-table_options *curs; 
-table_options *te;
+table_options *current=NULL; 
+
+int insert_ordre=0;
 FILE *file;
 keyspace_options memtable;
 char* text;
@@ -38,7 +26,7 @@ json_t *root;
 json_t *data;
 json_t *parser;
 json_error_t error;
-//extern int yylex(); 
+//extern int yylex(); d
 boolean follow_token=false;
 typetoken _lire_token(){ 
 	if(follow_token){
@@ -68,29 +56,27 @@ boolean cql_type(){
 boolean native_type(){
 		table_options * p=tables->fields;
 		boolean native=false;
-
 		if(token==ASCII){native=true;}
 		else if(token==BIGINT){native=true;}
-		else if(token==BLOB){native=true;}
+		else if(token==BLOB){native=true;}//binary
 		else if(token==BOOLEAN){native=true;}
 		else if(token==COUNTER){native=true;}
 		else if(token==DATE){native=true;}
 		else if(token==DECIMAL){native=true;}
 		else if(token==DOUBLE){native=true;}
 		else if(token==FLOAT){native=true;}
-		else if(token==INET){native=true;}
+		else if(token==INET){native=true;}//ignore
 		else if(token==INT){native=true;}
 		else if(token==SMALLINT){native=true;}
 		else if(token==TEXT){native=true;}
-		else if(token==TIME){native=true;}
-		else if(token==TIMESTAMP){native=true;}
-		else if(token==TIMEUUID){native=true;}
+		else if(token==TIME){native=true;}//ignore
+		else if(token==TIMESTAMP){native=true;}//ignore
+		else if(token==TIMEUUID){native=true;}//ignore
 		else if(token==TINYINT){native=true;}
-		else if(token==UUID){native=true;}
+		else if(token==UUID){native=true;}//8 4 4 12
 		else if(token==VARCHAR){native=true;}
 		else if(token==VARINT){native=true;}
 		if(native==true){
-			
 			while(p->next){
 				p=p->next;
 			}
@@ -114,9 +100,70 @@ boolean IDF(){
 		return idf;
 }
 
+boolean type_interpreter(typetoken tok,char * type){
+	switch(tok){
+		case INUMBER:
+			if(strcmp(type,"int")==0||strcmp(type,"smallint")==0||strcmp(type,"bigint")==0||strcmp(type,"decimal")==0||strcmp(type,"tinyint")==0)
+				return true;
+			break;
+		case DNUMBER :
+			if(strcmp(type,"float")==0||strcmp(type,"double")==0)
+				return true;
+			break;
+		case TRUE :
+			if(strcmp(type,"boolean")==0)
+				return true;
+			break;
+		case FALSE:
+			if(strcmp(type,"boolean")==0)
+				return true;
+			break;
+		case UUID_TOKEN:
+			if(strcmp(type,"text")==0||strcmp(type,"varchar")==0)
+				return true;
+			break;
+		case HEX:
+			if(strcmp(type,"text")==0||strcmp(type,"varchar")==0)
+				return true;
+			break;
+		case BLOB:
+			if(strcmp(type,"blob")==0)
+				return true;
+			break;	
+		default : 
+			return false;
+			break;
+	}
+	return false;
+}
+//
+boolean copy_data(typetoken tok,int ordre){
+	table_options * p=current;
+	int i=1;
+	/*if(p){
+		if(p->data && p->next && p->next->data==NULL)
+			if(p->data->value==NULL){
+				p->data->value=(char*)malloc(sizeof(char));*/
+
+	while(p && i<ordre){
+		p=p->next;
+		i++;
+	}
+	if(p && type_interpreter(tok,p->type)){
+		if(p->data){
+			if(p->data->value){
+				strcat(p->data->value,yytext);
+			}else
+			{
+				p->data->value=(char*)malloc(sizeof(char));
+				strcpy(p->data->value,yytext);
+			}
+		}
+	}
+			}
+
 //constant ::=  string | integer | float | boolean | uuid | blob | NULL
 boolean _const(){
-
 	boolean con=false;
 	if(token==STRING_TOKEN){con=true;}
 	else if(token==INUMBER){con=true;}
@@ -126,26 +173,23 @@ boolean _const(){
 	else if(token==BLOB_TOKEN){con=true;}
 	else if(token==UUID_TOKEN){con=true;}
 	else if(token==HEX){con=true;}
+	copy_data(token,insert_ordre);
 	return con;
 }
 
 //term ::=  constant | literal | function_call | type_hint | bind_marker
 boolean term(){
-
 		boolean ter=false;
 		if(_const()){ter=true;}
 		else if(literal()){ter=true;}
 		else if(function_call()){ter=true;}
 		else if(type_hint()){ter=true;}
 		else if(bind_marker()){ter=true;}
-		
 		return ter;
 }
 
 //literal ::=  collection_literal | udt_literal | tuple_literal
-
 boolean literal(){
-
 	boolean lit=false;
 	if(collection_literal()){lit=true;}
 	//else if(udt_literal()){lit=true;}
@@ -155,24 +199,23 @@ boolean literal(){
 
 //function_call ::=  identifier '(' [ term (',' term)* ] ')'
 boolean function_call(){
-
-		boolean fun=false;
-		if(IDF()){  printf("idffonction");
-					token=_lire_token();
-					if(token==POPEN){
-						//printf("(");
-						token=_lire_token();
-							if(term()){
-								//printf("term");
-								token=_lire_token();
-								if(isterm()){
-									fun=true;
-								}
-							}
-					}
+	boolean fun=false;
+	if(IDF()){  
+		printf("idffonction");
+		token=_lire_token();
+		if(token==POPEN){
+			//printf("(");
+			token=_lire_token();
+			if(term()){
+			//printf("term");
+				token=_lire_token();
+				if(isterm()){
+					fun=true;
 				}
-		
-		return fun;
+			}
+		}
+	}	
+	return fun;
 }
 
 //isterm ::= ,term | )
@@ -321,6 +364,7 @@ boolean map_literal(){
         }
 		return maplit;
 }
+
 boolean map_keyspace(){
 	memtable.class=(char*)malloc(sizeof(char));
 	boolean maplit=false;
@@ -665,8 +709,8 @@ boolean tuple_literal_aux(){
 	boolean ttp=false;
 	if(token==VIRG){ printf(",\n");
 		token=_lire_token();
-		if(term(
-			)){ printf("t2\n");
+		insert_ordre++;
+		if(term()){ printf("t2\n");
 			token=_lire_token();
 			ttp=tuple_literal_aux();
 		}
@@ -686,19 +730,123 @@ boolean names_values(){
    token=_lire_token();
    if(token==VALUES){ printf("VALUES\n");
    	token=_lire_token();
+   	insert_ordre=1;
    	if(tuple_literal()) n=true;}
 
    }
 return n;   
 }
+//values fonction
+//tuple
 
 
+
+
+
+
+
+
+boolean search_field(char*field){
+	tab_op*p;
+	boolean b=false;
+	table_options* fields=NULL;
+	table_options*temp=NULL;
+	primary*n=pr,*m=NULL,*r=NULL;
+
+	if(memtable.name){
+		p=memtable.tables;
+		if(p->fields)
+		{
+			fields=p->fields;
+			while(fields){
+				if(fields->name!=NULL && strcmp(fields->name,field)==0){
+					if(current==NULL){
+						current=(table_options*)malloc(sizeof(table_options));
+						current->name=(char*)malloc(sizeof(char));
+						current->type=(char*)malloc(sizeof(char));
+						strcpy(current->name,field);
+						strcpy(current->type,fields->type);
+					}else{
+						temp=current;
+						while(temp->next)
+							temp=temp->next;
+						temp->next=(table_options*)malloc(sizeof(table_options));
+						temp=temp->next;
+						temp->name=(char*)malloc(sizeof(char));
+						temp->type=(char*)malloc(sizeof(char));
+						strcpy(temp->name,field);
+						strcpy(temp->type,fields->type);
+					}
+					b=true;
+				}
+				if(fields->primary){
+					if(current==NULL){
+						current=(table_options*)malloc(sizeof(table_options));
+						if(fields->name){
+						current->name=(char*)malloc(sizeof(char));
+						current->type=(char*)malloc(sizeof(char));
+						strcpy(current->name,field);
+						strcpy(current->type,fields->type);
+						}
+						current->primary=fields->primary;
+						
+					}
+					else{
+						temp=current;
+						while(temp->next)
+							temp=temp->next;
+						temp->next=(table_options*)malloc(sizeof(table_options));
+						temp=temp->next;
+						if(fields->name){
+						temp->name=(char*)malloc(sizeof(char));
+						temp->type=(char*)malloc(sizeof(char));
+						strcpy(temp->name,field);
+						strcpy(temp->type,fields->type);
+						}
+						temp->primary->partition=fields->primary->partition;
+						temp->primary->name=(char*)malloc(sizeof(char));
+						strcpy(temp->primary->name,fields->primary->name);
+						temp->primary->next=NULL;
+					}//m=temp->primary && n = pr
+					r=NULL;
+					if(temp)
+						m=temp->primary;
+					if(n!=NULL)
+						while(m){
+							while(n){
+								if(strcmp(n->name,m->name)==0){
+									if(r==NULL && n)
+									{	n=n->next;
+										pr=pr->next;
+									}else
+									{
+										r->next=n->next;
+										n=n->next;
+									}
+									break;
+								}else{
+									r=n;
+									n=n->next;
+								}
+								
+							}
+							m=m->next;
+						}
+				}
+				fields=fields->next;
+			}
+		}
+	}
+return b;
+}
 //_names ::=  '(' column_name ( ',' column_name )* ')' ::= ( idf tuple_names_aux
 boolean _names(){
+char * name=(char*)malloc(sizeof(char));	
   boolean tup=false;
-  if(token==POPEN){printf("(\n" );
+  if(token==POPEN){
   	token=_lire_token();
-  	if(IDF()){printf("col1\n");
+  	strcpy(name,yytext);
+  	if(search_field(name)){
   		token=_lire_token();
   		tup=tuple_names_aux();
   	}
@@ -708,10 +856,12 @@ boolean _names(){
 
 //tuple_literal_aux ::= ,term | )
 boolean tuple_names_aux(){
+	char * name=(char*)malloc(sizeof(char));
 	boolean ttp=false;
 	if(token==VIRG){ printf(",\n");
 		token=_lire_token();
-		if(IDF()){ printf("column2\n");
+		strcpy(name,yytext);
+  		if(search_field(name)){ printf("column2\n");
 			token=_lire_token();
 			ttp=tuple_names_aux();
 		}
@@ -762,41 +912,45 @@ boolean _using_parameter()
                       [ USING update_parameter ( AND update_parameter )* ]
                       */
 
-boolean table_name
 
 
 boolean insert_statement()
-{
+{	
 	boolean ins=false;
 	if(token==INSERT){ printf("insert\n");
 		token=_lire_token();
 		if(token==INTO){printf("into\n");
 			token=_lire_token();
 			if (IDF())
-			{
-				token=_lire_token();
-			
-				if(names_values()){printf("columns\n");
-				token=_lire_token();
-				if(token==IF){
+			{ 
+				if(table_name()){
 					token=_lire_token();
-					if(token==NOT_EXISTS)
-					{
-						token=_lire_token();
-						if(token==USING)
-						{
-							follow_token=true;
-							token=_lire_token();
-							ins=_using_parameter();
-						}
-						else if(token==PVIRG) ins=true;
+				if(names_values()){
+					if(pr){
+						errs=creer_semantic_error(APM,cursor,errs);
+						return false;
 					}
-				}
-				else if(token==USING)
-						{
-							follow_token=true;
+
+					token=_lire_token();
+					if(token==IF){
+						token=_lire_token();
+						if(token==NOT_EXISTS)
+							{
 							token=_lire_token();
-							ins=_using_parameter();
+							if(token==USING)
+								{
+								follow_token=true;
+								token=_lire_token();
+								ins=_using_parameter();
+								}
+							else if(token==PVIRG) ins=true;
+							}
+					}
+				else if(token==USING)
+					{
+						follow_token=true;
+						token=_lire_token();
+						ins=_using_parameter();
 						}
 				else if(token==PVIRG||token==ENTER) {printf(";");ins=true;}
 
@@ -806,6 +960,7 @@ boolean insert_statement()
 
 
 			}
+		}
 		}
 	}}
     return ins;
@@ -879,73 +1034,59 @@ boolean drop_keyspace_statement(){
 /************ table_name*******************/
 boolean table_name(){
 	        char* keys=(char*)malloc(48*sizeof(char));
-			char* key=(char*)malloc(48*sizeof(char));
+			char* table_name=(char*)malloc(48*sizeof(char));
 			strcpy(keys,yytext);
-			strcpy(key,yytext);
-			tab_op* l=(tab_op*)malloc(sizeof(tab_op));			
-			l->fields=NULL;
+			tab_op* l=NULL;
+			table_options*tp=NULL;
+		    primary* pri=NULL;
 			token=_lire_token();
 					if(token==POINT){
 						token=_lire_token();
+						strcpy(table_name,yytext);
 						if(IDF())
 							{	
 								strcat(keys,"/");
 								strcat(keys,"keyspace.txt");
-								file=fopen(keys,"r");
-								char *testagain=(char*)malloc(48*sizeof(char));
-								if(file==NULL){
-									errs=creer_semantic_error(KDE,cursor,errs);
-								}else{
-									use_aux(key);
-
-									l->keyspace_name=(char*)malloc(48*sizeof(char));
-									l->name=(char*)malloc(48*sizeof(char));
-					 				strcpy(l->keyspace_name,key);
-					 				strcpy(l->name,yytext);
-					 				strcpy(testagain,l->keyspace_name);
-					 				strcat(testagain,"/");
-					 				strcat(testagain,l->name);
-					 				fclose(file);
-					 				file=fopen(testagain,"r");
-					 				if(file==NULL){
-					 					errs=creer_semantic_error(TDE,cursor,errs);					 					
-					 				}
-					 				else{		
-
-					 					return true;
-					 				}
+								read_json(keys);
+								printf("%s\n and table name %s\n",memtable.name,table_name);
+								l=memtable.tables;
+								printf("the name is %s",l->name);
+								while(l && strcmp(l->name,table_name)==0){
+									
+										l=l->next;
+									}
+									if(l && strcmp(l->name,table_name)==0){
+										tp=l->fields;
+										while(tp){
+											if(tp->primary){
+												pr=tp->primary;
+											}
+										}
+										return true;
+									}
 								}
-								
+									errs=creer_semantic_error(TDE,cursor,errs);
 							}
-					}
+					
 					else 
 					 {//keyspace par defaut
-					 	char *testagain=(char*)malloc(sizeof(char));
-					 		l->name=(char*)malloc(sizeof(char));
-					 		l->keyspace_name=(char*)malloc(sizeof(char));
-					 		if(memtable.name!=NULL){
-					 			strcpy(l->keyspace_name,memtable.name);
-					 			strcpy(l->name,keys);
-					 			strcpy(testagain,memtable.name);
-					 			strcat(testagain,"/");
-					 			strcat(testagain,l->name);
-					 			file=fopen(testagain,"r");
-					 			if(file==NULL){
-					 				errs=creer_semantic_error(TAE,cursor,errs);
-					 				//		errs=errs->next;
-					 			}
-					 			else{	
-		    						follow_token=true;
-		    						fclose(file);
-		    						l->next=tables;
-		    						tables=l;
-									return true;}
-								}else{
-									errs=creer_semantic_error(UK,cursor,errs);
-								}
+					 	l=memtable.tables;
+								while(l && strcmp(l->name,table_name)==0){
+										l=l->next;
+									
+									}
+									if(l && strcmp(l->name,table_name)==0){
+										tp=l->fields;
+										while(tp){
+											if(tp->primary){
+												pr=tp->primary;
+											}
+										}
+										return true;
+									}					
+									errs=creer_semantic_error(TDE,cursor,errs);
                    		}
-
-
+        return false;
 	}
 /************** drop_table_statement::=  DROP TABLE [ IF EXISTS ] table_name;******************/
 boolean drop_table_statement(){
@@ -965,7 +1106,7 @@ boolean drop_table_statement(){
 								}
 						}
 					}
-					}
+				 	}
 					else{
 						if(table_name())
 							{
@@ -3059,7 +3200,7 @@ assignment       ::=  simple_selection '=' term
                      | column_name '=' list_literal '+' column_name
 */
 boolean assigement(){
-		boolean ass=false;
+		boolean assi=false;
 	int a=simple_selection();
 	if((a!=3)&&(a!=0)){
 		printf("\n-->simple");
@@ -3069,7 +3210,7 @@ boolean assigement(){
 			token=_lire_token();
 			if(term()){
 				printf("\n-->term");
-				ass=true;
+				assi=true;
 			}
 		}
 	}
@@ -3084,7 +3225,7 @@ boolean assigement(){
 				if(token==PLUS){
 					token=_lire_token();
 					if(column_name()){
-						ass=true;
+						assi=true;
 					}
 				}
 			}
@@ -3095,15 +3236,15 @@ boolean assigement(){
 					printf("its plus");
 					token=_lire_token();
 					if(term()){
-						ass=true;
+						assi=true;
 					}
 				}
 			}
-			else if(term()){ass=true;}
+			else if(term()){assi=true;}
 		}
 
 	}
-		return ass;
+		return assi;
 }
 
 
@@ -3461,7 +3602,6 @@ boolean clustering_columns(){
 			}
 			pri=p->primary;
 			while(pri->next){
-				pri->data=NULL;
 				pri=pri->next;
 			}
 			pri->next=(primary*)malloc(sizeof(primary));
@@ -3736,8 +3876,10 @@ boolean create_table(){
 				}
 		}
 	if(b==true){
-		if(addTable_Keyspace()==true)
+		if(addTable_Keyspace()==true){
 		write_table();
+		memtable.tables=tables;
+	}
 		else 
 			b=false;
 
@@ -3903,7 +4045,7 @@ return create_table_keyspace();}
 
 //READING A KEYSPACE FROM A PATH  AND CREATE A SEMANTIC ERREUR IF KEYSPACE NOT FOUND
 void read_json(char * logpath){
-
+tab_op*p;
 root = json_load_file(logpath,0, &error);
   	if(root==NULL)
   	{
@@ -3918,29 +4060,26 @@ root = json_load_file(logpath,0, &error);
   		
   		json_t * imthetable=json_array_get(root,1);
   		size_t k=json_array_size(imthetable);
-  		for(int i=0,i<k,i++)
+  		for(int i=0;i<k;i++)
   		{	if(i==0 && tables==NULL){
   			tables=(tab_op*)malloc(sizeof(tab_op));
   			tables->keyspace_name=(char*)malloc(sizeof(char));
   			tables->name=(char*)malloc(sizeof(char));
-  			strcpy(tables->name,json_array_get(imthetable,i));
+  			strcpy(tables->name,json_string_value(json_array_get(imthetable,i)));
   			strcpy(tables->keyspace_name,memtable.name);
-
+  			tables->next=NULL;
   		}else{
-  			meme=(table_options*)malloc(sizeof(table_options));
-
-
+  			p=(tab_op*)malloc(sizeof(tab_op));
+  			p->keyspace_name=(char*)malloc(sizeof(char));
+  			p->name=(char*)malloc(sizeof(char));
+  			strcpy(p->name,json_string_value(json_array_get(imthetable,i)));
+  			strcpy(p->keyspace_name,memtable.name);
+  			p->next=tables;
   		}
-  			
-  			
   		}
+		memtable.tables=tables;
 	}
 }
-
-
-
-
-
 //ADDING A TABLE TO THE JSON KEYSPACE AND CREATING ITS FILE IF NOT ( IT DEPENDS ON WHETHER WE USE THE OPTION  IF EXISTS OR NOT)
 boolean addTable_Keyspace(){
 	json_t*tab=json_array_get(root,1);
@@ -3969,6 +4108,7 @@ boolean addTable_Keyspace(){
 		mkdir(logpath,0777);
 		strcat(keyspacee,"keyspace.txt");
 		json_dump_file(root,keyspacee,0);
+		memtable.tables=tables;
 		return true;
 }
 

@@ -56,11 +56,11 @@ string ['][^']*([']{2})*[^']*[']
 "float"			        { return FLOAT;}
 "inet"			        { return INET;}
 "int"			        { return INT;}
-"blob"				{return BLOB;}
-"string"			{return STRING;}
+"blob"					{return BLOB;}
+"string"				 {return STRING;}
 "smallint"			{ return SMALLINT;}
 "text"			        { return TEXT;}					
-"to"				{return TO_TOKEN;}
+"to"					{return TO_TOKEN;}
 "time"			        { return TIME;}
 "bigint"			{return BIGINT;}
 "timestamp"			{ return TIMESTAMP;}

@@ -10,7 +10,7 @@ char* prt;
 primary *pr=NULL;
 table_options *used=NULL;
 tab_op *tables=NULL;
-table_options *current=NULL; 
+table_options *current=NULL;
 
 int insert_ordre=0;
 FILE *file;
@@ -28,13 +28,14 @@ json_t *parser;
 json_error_t error;
 //extern int yylex(); d
 boolean follow_token=false;
-typetoken _lire_token(){ 
+typetoken _lire_token(){
 	if(follow_token){
 	follow_token=false;//remise a zero du marqueur de surlecture
 	return token;//renvoie le token déjà lu
 	}
-	else return (typetoken) yylex(); 
-} 
+	else return (typetoken) yylex();
+}
+
 
 //cql_type ::=  native_type | collection_type | user_defined_type | tuple_type | custom_type
 
@@ -47,13 +48,54 @@ boolean cql_type(){
 				else if(tuple_type()){check=true;}
 				//else if(custom_type()){check=true;}
 				//else if(user_defined_type()){check=true;}
-				
 				return  check;
 }
+
+
+
+//Navigate the type
+
+terms_types * navigate_type(terms_types* type){
+terms_types *utype;//the type in the next function call
+	if(type!=NULL){
+	switch(type->vartype){
+		case MAP:
+		case MAP_LIT:
+			utype=type->term.Map->key;
+			if(navigate_type(utype)->vartype!=MAP && navigate_type(utype)->vartype!=MAP_LIT && navigate_type(utype)->vartype!=SET && navigate_type(utype)->vartype!=SET_LIT && navigate_type(utype)->vartype!=LIST)
+				return type;
+			else
+				return navigate_type(type);
+			break;
+		case SET :
+		case  SET_LIT :
+			utype=type->term.Set->terms;
+			if(navigate_type(utype)->vartype!=MAP && navigate_type(utype)->vartype!=MAP_LIT && navigate_type(utype)->vartype!=SET && navigate_type(utype)->vartype!=SET_LIT && navigate_type(utype)->vartype!=LIST)
+				return type;
+			else
+				return navigate_type(type);
+			break;
+		case LIST :
+			utype=type->term.List->terms;
+		if(navigate_type(utype)->vartype!=MAP && navigate_type(utype)->vartype!=MAP_LIT && navigate_type(utype)->vartype!=SET && navigate_type(utype)->vartype!=SET_LIT && navigate_type(utype)->vartype!=LIST)
+				return type;
+			else
+				return navigate_type(type);
+			break;
+		default :
+			return type;
+			break;				
+		}
+	}
+		return type;
+}
+
+
 
 //native_type ::=  ASCII| BIGINT | BLOB| BOOLEAN| COUNTER| DATE| DECIMAL| DOUBLE| FLOAT| INET| INT| SMALLINT| TEXT| TIME| TIMESTAMP| TIMEUUID| TINYINT| UUID| VARCHAR | VARINT
 
 boolean native_type(){
+		terms_types * t_t=NULL;
 		table_options * p=tables->fields;
 		boolean native=false;
 		if(token==ASCII){native=true;}
@@ -81,10 +123,43 @@ boolean native_type(){
 				p=p->next;
 			}
 			if(p->type==NULL){
-				p->type=(char*)malloc(sizeof(char)*48);
-				strcpy(p->type,yytext);
+				p->type=(terms_types*)malloc(sizeof(terms_types));
+				p->type->vartype=token;
+				p->type->term.data=NULL;
 		}else{
-				strcat(p->type,yytext);
+				t_t=navigate_type(p->type);
+				switch(t_t->vartype){
+					case MAP :
+					case MAP_LIT:
+						if(t_t->term.Map->key==NULL){
+							t_t->term.Map->key=(terms_types*)malloc(sizeof(terms_types));
+							t_t->term.Map->key->vartype=token;
+							t_t->term.Map->key->term.data=NULL;
+						}else
+						{
+							if(t_t->term.Map->value==NULL){
+							t_t->term.Map->value=(terms_types*)malloc(sizeof(terms_types));
+							t_t->term.Map->value->vartype=token;
+							t_t->term.Map->value->term.data=NULL;
+							}
+						}
+						break;
+					case SET :
+					case  SET_LIT :	
+						t_t->term.Set->terms=(terms_types*)malloc(sizeof(terms_types));
+						t_t->term.Set->terms->vartype=token;
+						t_t->term.Set->terms->term.data=NULL;
+						break;
+					case LIST:
+						t_t->term.List->terms=(terms_types*)malloc(sizeof(terms_types));
+						t_t->term.List->terms->vartype=token;
+						t_t->term.List->terms->term.data=NULL;
+						break;
+					default :
+						t_t->vartype=token;
+						break;
+
+				}
 		}
 		}
 		return native;
@@ -93,13 +168,22 @@ boolean native_type(){
 
 //idf ::= quoted_idf | unquoted_idf
 boolean IDF(){
-
 		boolean idf=false;
-		if(token==QUOTED_IDF){idf=true;}
-		else if(token==UNQUOTED_IDF){idf=true;}
+		if(token==QUOTED_IDF){
+			idf=true;
+		}
+		else if(token==UNQUOTED_IDF){
+			idf=true;
+		}
+		if(idf==true){
+			printf("its true wtf");
+		}
+		if(idf==false){
+			printf("it's false wth");
+		}
 		return idf;
 }
-
+/*
 boolean type_interpreter(typetoken tok,char * type){
 	switch(tok){
 		case INUMBER:
@@ -129,8 +213,8 @@ boolean type_interpreter(typetoken tok,char * type){
 		case BLOB:
 			if(strcmp(type,"blob")==0)
 				return true;
-			break;	
-		default : 
+			break;
+		default :
 			return false;
 			break;
 	}
@@ -145,7 +229,7 @@ boolean copy_data(typetoken tok,int ordre){
 			if(p->data->value==NULL){
 				p->data->value=(char*)malloc(sizeof(char));*/
 
-	while(p && i<ordre){
+/*	while(p && i<ordre){
 		p=p->next;
 		i++;
 	}
@@ -160,7 +244,7 @@ boolean copy_data(typetoken tok,int ordre){
 			}
 		}
 	}
-			}
+			}*/
 
 //constant ::=  string | integer | float | boolean | uuid | blob | NULL
 boolean _const(){
@@ -173,7 +257,7 @@ boolean _const(){
 	else if(token==BLOB_TOKEN){con=true;}
 	else if(token==UUID_TOKEN){con=true;}
 	else if(token==HEX){con=true;}
-	copy_data(token,insert_ordre);
+	//copy_data(token,insert_ordre);
 	return con;
 }
 
@@ -200,7 +284,7 @@ boolean literal(){
 //function_call ::=  identifier '(' [ term (',' term)* ] ')'
 boolean function_call(){
 	boolean fun=false;
-	if(IDF()){  
+	if(IDF()){
 		printf("idffonction");
 		token=_lire_token();
 		if(token==POPEN){
@@ -214,7 +298,7 @@ boolean function_call(){
 				}
 			}
 		}
-	}	
+	}
 	return fun;
 }
 
@@ -240,12 +324,12 @@ boolean type_hint(){
 			token=_lire_token();
 			if(cql_type()){
 				token=_lire_token();
-				if(token==PCLOSE){ 
+				if(token==PCLOSE){
 					token=_lire_token();
 					if(term()) hint=true;
 				}
 			}
-		}		
+		}
 	    return hint;
 }
 
@@ -274,24 +358,24 @@ boolean collection_type(){
 				p=p->next;
 			}
 			if(p->type==NULL){
-				p->type=(char*)malloc(sizeof(char)*48);
-				strcpy(p->type,yytext);
+		//		p->type=(char*)malloc(sizeof(char)*48);
+			//	strcpy(p->type,yytext);
 		}else{
-				strcat(p->type,yytext);
+			//	strcat(p->type,yytext);
 		}
 		token=_lire_token();
 		if(token==LESSER){
-			strcat(p->type,yytext);
+		//	strcat(p->type,yytext);
 			token=_lire_token();
 			if(cql_type()){
 				token=_lire_token();
 				if(token==VIRG){
-					strcat(p->type,yytext);
+					//strcat(p->type,yytext);
 					token=_lire_token();
 					if(cql_type()){
 						token=_lire_token();
 						if(token==BIGGER){
-							strcat(p->type,yytext);
+						//	strcat(p->type,yytext);
 							col=true;
 						}
 					}
@@ -300,25 +384,25 @@ boolean collection_type(){
 		}
 	}
 
-	
+
 	else {if(token==SET){
 		while(p->next){
 				p=p->next;
 			}
 			if(p->type==NULL){
-				p->type=(char*)malloc(sizeof(char)*48);
-				strcpy(p->type,yytext);
+			//	p->type=(char*)malloc(sizeof(char)*48);
+			//	strcpy(p->type,yytext);
 		}else{
-				strcat(p->type,yytext);
+			//	strcat(p->type,yytext);
 		}
 		token=_lire_token();
 		if(token==LESSER){
-			strcat(p->type,yytext);
+			//strcat(p->type,yytext);
 			token=_lire_token();
 			if(cql_type()){
 				token=_lire_token();
 				if(token==BIGGER){
-					strcat(p->type,yytext);
+			//		strcat(p->type,yytext);
 					col=true;
 				}
 			}
@@ -328,12 +412,12 @@ boolean collection_type(){
 	else { if(token==LIST){
 			token=_lire_token();
 			if(token==LESSER){
-				strcat(p->type,yytext);
+			//	strcat(p->type,yytext);
 				token=_lire_token();
 				if(cql_type()){
 				token=_lire_token();
 					if(token==BIGGER){
-						strcat(p->type,yytext);
+			//			strcat(p->type,yytext);
 						col=true;
 					}
 				}
@@ -356,11 +440,11 @@ boolean map_literal(){
 					if(term()){
 						token=_lire_token();
 						if(islit()){
-								maplit=true;	    
+								maplit=true;
 					    }
                     }
                 }
-            } 
+            }
         }
 		return maplit;
 }
@@ -384,8 +468,8 @@ boolean map_keyspace(){
 						printf("\n %d\n",strcmp(yytext,"\'SimpleStrategy\'"));
 						cursor++;
 						if((strcmp(yytext,"\'SimpleStrategy\'")==0)||(strcmp(yytext,"\'NetworkTopologyStrategy\'")==0)){
-						strcpy(memtable.class,yytext);	
-						//printf("my class is %s\n",memtable.class);						
+						strcpy(memtable.class,yytext);
+						//printf("my class is %s\n",memtable.class);
 							token=_lire_token();
 						if(token==VIRG){
 							token=_lire_token();
@@ -403,14 +487,14 @@ boolean map_keyspace(){
 											printf("%d replication_factor \n",memtable.replication_factor);
 											token=_lire_token();
 											if(token==ACOLF){
-												maplit=true;	
+												maplit=true;
 											}
 										}
 									}
 								}else {
 
 								}
-								//maplit=true;	    
+								//maplit=true;
 							}
 							else if(token==ACOLF){
 								maplit=true;
@@ -423,14 +507,14 @@ boolean map_keyspace(){
 						errs=creer_semantic_error(CIV,cursor,errs);
 						//errs=errs->next;
 						}
-					}	
+					}
                 }
-            } 
+            }
         }
 		return maplit;
-		
+
 }
-//islit ::= ,term : term | } 
+//islit ::= ,term : term | }
 boolean islit(){
 
 		boolean ismlit=false;
@@ -443,17 +527,17 @@ boolean islit(){
 					if(term()){
 						token=_lire_token();
 						ismlit=islit();
-				
+
 				    }
 			    }
 			}
 		}
 
-			
+
 		else if(token==ACOLF){
 			ismlit=true;
 		}
-		
+
 		return ismlit;
 }
 //list_literal ::=  '[' [ term (',' term)* ] ']'
@@ -465,23 +549,19 @@ boolean list_literal(){
 				token=_lire_token();
 		        listlit=islist();
 		}
-	}		
+	}
 	return listlit;
 }
-//islist ::= ,term | ] 
+//islist ::= ,term | ]
 boolean islist(){
 	boolean islis=false;
 	if(token==VIRG){
 		token=_lire_token();
 		if(term()){
-			token=_lire_token();
-			islis=islist();
-		}
-	}
-	else if(token==CRCLOSE){
 		islis=true;
 	}
 	return islis;
+}
 }
 //set_literal ::=  '{' [ term (',' term)* ] '}'
 boolean set_literal(){
@@ -492,10 +572,10 @@ boolean set_literal(){
 				token=_lire_token();
 		        listlit=isset();
 		}
-	}		
+	}
 	return listlit;
 }
-//islist ::= ,term | ] 
+//islist ::= ,term | ]
 boolean isset(){
 	boolean islis=false;
 	if(token==VIRG){ printf(",");
@@ -526,7 +606,7 @@ boolean  collection_literal(){
 	else if(list_literal()){
 		printf("hani hna");
 		collit=true;
-		}	
+		}
 	return collit;
 }
 typetoken mapset_literal(){
@@ -539,10 +619,10 @@ typetoken mapset_literal(){
 					token=_lire_token();
 					if(term()){printf("term\n");
 						token=_lire_token();
-							if(is_udt()) mapset=UDT_LIT;	
+							if(is_udt()) mapset=UDT_LIT;
 					}
 				}
-				//case it's a function 
+				//case it's a function
 				else if(token==POPEN){token=_lire_token();
 							if(term()){
 								//printf("term");
@@ -554,10 +634,10 @@ typetoken mapset_literal(){
 										if(term()){
 											token=_lire_token();
 											if(islit()){ mapset=MAP_LIT;}
-                						}	
+                						}
               						}
-									else if(token==VIRG){ 
-											follow_token=true; 
+									else if(token==VIRG){
+											follow_token=true;
 											token=_lire_token();
 											if(isset()){ printf("Hani f iss set"); mapset=SET_LIT;}
 										}
@@ -575,13 +655,13 @@ typetoken mapset_literal(){
 						if(islit()){printf("Hni f is lit "); mapset=MAP_LIT;return mapset;}
                 	}
                }
-				else if(token==VIRG){ 
-					follow_token=true; 
+				else if(token==VIRG){
+					follow_token=true;
 					token=_lire_token();
 					if(isset()){ printf("Hani f iss set"); mapset=SET_LIT;return mapset;}
-				
+
 				else if(token==ACOLF) mapset=SET_LIT;
-                
+
             	}
         	}
         }
@@ -599,11 +679,11 @@ boolean udt_literal(){
 					token=_lire_token();
 					if(term()){printf("term\n");
 						token=_lire_token();
-							if(is_udt()) udtl=true;	
+							if(is_udt()) udtl=true;
 					}
 				}
         	}
-    return udtl;    	
+    return udtl;
 }*/
 
 
@@ -614,7 +694,7 @@ boolean udt_literal(){
 	typetoken b;
 	b=mapset_literal();
 	if(b==UDT_LIT) udtl=true;
-    return udtl;    	
+    return udtl;
 }
 
 // is_udt::= ',' identifier ':' term  | '}'
@@ -641,21 +721,21 @@ boolean is_udt(){
 boolean tuple_type(){
 	table_options * p=tables->fields;
 	boolean tup=false;
-	if(token==TUPLE){ 
+	if(token==TUPLE){
 		while(p->next){
 				p=p->next;
 			}
 			if(p->type==NULL){
-				p->type=(char*)malloc(sizeof(char)*48);
-				strcpy(p->type,yytext);
+			//	p->type=(char*)malloc(sizeof(char)*48);
+			//	strcpy(p->type,yytext);
 		}else{
-				strcat(p->type,yytext);
+			//	strcat(p->type,yytext);
 		}
 		token=_lire_token();
 		if(token==LESSER){
-			strcat(p->type,yytext);
+			//strcat(p->type,yytext);
 			token=_lire_token();
-			if(cql_type()){ 
+			if(cql_type()){
 				token=_lire_token();
  				tup=tuple_type_aux();
 			}
@@ -671,7 +751,7 @@ boolean tuple_type_aux(){
 			}
 	boolean ttp=false;
 	if(token==VIRG){
-		strcat(p->type,yytext);
+	//	strcat(p->type,yytext);
 		token=_lire_token();
 		if(cql_type()){
 			token=_lire_token();
@@ -679,7 +759,7 @@ boolean tuple_type_aux(){
 		}
 	}
 	else if(token==BIGGER){
-		strcat(p->type,yytext);
+	//	strcat(p->type,yytext);
 		ttp=true;
 	}
 	return ttp;
@@ -687,7 +767,7 @@ boolean tuple_type_aux(){
 //tuple_literal ::=  '(' term ( ',' term )* ')'
 boolean tuple_literal(){
   boolean tup=false;
-  if(token==POPEN){printf("("); 
+  if(token==POPEN){printf("(");
   	token=_lire_token();
   	if(term()){ printf("term");
   		token=_lire_token();
@@ -726,7 +806,9 @@ boolean tuple_literal_aux(){
 
 boolean names_values(){
  boolean n=false;
- if(_names()){ printf("namesvalid\n");
+ printf("names & values\n");
+ if(_names()){
+   printf("namesvalid\n");
    token=_lire_token();
    if(token==VALUES){ printf("VALUES\n");
    	token=_lire_token();
@@ -734,7 +816,7 @@ boolean names_values(){
    	if(tuple_literal()) n=true;}
 
    }
-return n;   
+return n;
 }
 //values fonction
 //tuple
@@ -745,8 +827,8 @@ return n;
 
 
 
-
-boolean search_field(char*field){
+//fils the current list with the mentionned variables and the primary keys
+/*boolean search_field(char*field){
 	tab_op*p;
 	boolean b=false;
 	table_options* fields=NULL;
@@ -789,12 +871,13 @@ boolean search_field(char*field){
 						strcpy(current->type,fields->type);
 						}
 						current->primary=fields->primary;
-						
+
 					}
 					else{
 						temp=current;
-						while(temp->next)
+						while(temp->next && temp->primary==NULL)
 							temp=temp->next;
+						if(temp->primary==NULL){
 						temp->next=(table_options*)malloc(sizeof(table_options));
 						temp=temp->next;
 						if(fields->name){
@@ -807,6 +890,7 @@ boolean search_field(char*field){
 						temp->primary->name=(char*)malloc(sizeof(char));
 						strcpy(temp->primary->name,fields->primary->name);
 						temp->primary->next=NULL;
+						}
 					}//m=temp->primary && n = pr
 					r=NULL;
 					if(temp)
@@ -828,7 +912,7 @@ boolean search_field(char*field){
 									r=n;
 									n=n->next;
 								}
-								
+
 							}
 							m=m->next;
 						}
@@ -838,18 +922,18 @@ boolean search_field(char*field){
 		}
 	}
 return b;
-}
+}*/
 //_names ::=  '(' column_name ( ',' column_name )* ')' ::= ( idf tuple_names_aux
 boolean _names(){
-char * name=(char*)malloc(sizeof(char));	
+char * name=(char*)malloc(sizeof(char));
   boolean tup=false;
   if(token==POPEN){
   	token=_lire_token();
   	strcpy(name,yytext);
-  	if(search_field(name)){
+  //	if(search_field(name)){
   		token=_lire_token();
   		tup=tuple_names_aux();
-  	}
+  	//}
   }
   return tup;
 }
@@ -861,10 +945,11 @@ boolean tuple_names_aux(){
 	if(token==VIRG){ printf(",\n");
 		token=_lire_token();
 		strcpy(name,yytext);
-  		if(search_field(name)){ printf("column2\n");
+  		//if(search_field(name)){ 
+  			printf("column2\n");
 			token=_lire_token();
 			ttp=tuple_names_aux();
-		}
+	//	}
 	}
 	else if(token==PCLOSE){ printf(")\n");
 		ttp=true;
@@ -915,14 +1000,14 @@ boolean _using_parameter()
 
 
 boolean insert_statement()
-{	
+{
 	boolean ins=false;
 	if(token==INSERT){ printf("insert\n");
 		token=_lire_token();
 		if(token==INTO){printf("into\n");
 			token=_lire_token();
 			if (IDF())
-			{ 
+			{
 				if(table_name()){
 					token=_lire_token();
 				if(names_values()){
@@ -990,19 +1075,19 @@ column_name cql_type
 
 /******************** name *************/
 boolean name(){
-							
+
 							boolean n=false;
 							char * name=(char*)malloc(100*sizeof(char));
 							if(IDF()){
 
 							}
-							
+
 							return n;
-							}	
+							}
 /****************  drop_keyspace_statement ::=  DROP KEYSPACE [ IF EXISTS ] keyspace_name*************/
 boolean drop_keyspace_statement(){
 				boolean drk=false;
-				
+
 					if(token=KEYSPACE){
 						token=_lire_token();
 					if(token==IF){
@@ -1015,22 +1100,22 @@ boolean drop_keyspace_statement(){
 									drk=true;
 										}
 										}
-										}	
+										}
 						}
 					else {if(name()){
 							token=_lire_token();
 								if(token==PVIRG){
 									drk=true;
-												}	
+												}
 										}
 					}
-						
-					}
-				
-				
-    return drk;		
 
-}	
+					}
+
+
+    return drk;
+
+}
 /************ table_name*******************/
 boolean table_name(){
 	        char* keys=(char*)malloc(48*sizeof(char));
@@ -1044,46 +1129,53 @@ boolean table_name(){
 						token=_lire_token();
 						strcpy(table_name,yytext);
 						if(IDF())
-							{	
+							{
 								strcat(keys,"/");
 								strcat(keys,"keyspace.txt");
 								read_json(keys);
-								printf("%s\n and table name %s\n",memtable.name,table_name);
 								l=memtable.tables;
-								printf("the name is %s",l->name);
-								while(l && strcmp(l->name,table_name)==0){
-									
+								printf("le nom du table : %s", table_name);
+								printf("la table dans l %s\n ",l->name);
+								while(l && strcmp(l->name,table_name)!=0){
 										l=l->next;
 									}
 									if(l && strcmp(l->name,table_name)==0){
 										tp=l->fields;
 										while(tp){
+											printf("IN1\n");
 											if(tp->primary){
 												pr=tp->primary;
+												printf("OUT1\n");
+												return true;
 											}
+											tp=tp->next;
 										}
-										return true;
+
 									}
 								}
 									errs=creer_semantic_error(TDE,cursor,errs);
 							}
-					
-					else 
+
+					else
 					 {//keyspace par defaut
 					 	l=memtable.tables;
 								while(l && strcmp(l->name,table_name)==0){
 										l=l->next;
-									
+
 									}
 									if(l && strcmp(l->name,table_name)==0){
 										tp=l->fields;
 										while(tp){
+											printf("IN2\n");
 											if(tp->primary){
 												pr=tp->primary;
+												printf("OUT2\n");
+												return true;
 											}
+											tp=tp->next;
 										}
-										return true;
-									}					
+
+									}
 									errs=creer_semantic_error(TDE,cursor,errs);
                    		}
         return false;
@@ -1091,7 +1183,7 @@ boolean table_name(){
 /************** drop_table_statement::=  DROP TABLE [ IF EXISTS ] table_name;******************/
 boolean drop_table_statement(){
 		boolean drtab=false;
-		
+
 				if(token==TABLE){
 					token=_lire_token();
 					if(token==IF){
@@ -1115,15 +1207,15 @@ boolean drop_table_statement(){
 								{
 										drtab=true;
 								}
-							}	
+							}
 						}
-				
-				}
-	
-		
 
-  return drtab;		
-}			
+				}
+
+
+
+  return drtab;
+}
 
 
 /******************* update_parametre *********************/
@@ -1137,10 +1229,10 @@ boolean update_parametre(){
 		if(token==INUMBER || bind_marker())
 		{	para=true;
 		}
-		
+
 	}
-	
- return para;	
+
+ return para;
 
 }
 /******************** using_delete *****************
@@ -1172,9 +1264,9 @@ boolean using_delete(){
 		}
 
 	}
-	
+
  }
-	
+
 }*/
 /*******************operateur ********************/
 /*boolean operateur(){
@@ -1212,7 +1304,7 @@ boolean using_delete(){
 /***************** drop_index_statement::=  DROP INDEX [ IF EXISTS ] index_name; ******************/
 boolean drop_index_statement(){
 	boolean drin=false;
-	
+
 		if(token==INDEX){
 			token=_lire_token();
 			if(token==IF){
@@ -1220,35 +1312,35 @@ boolean drop_index_statement(){
 			if(token==EXISTS){
 				token=_lire_token();
 			if(token==UNQUOTED_NAME){
-				
+
 				token=_lire_token();
 					if(token==PVIRG)
-						{	
-							drin=true;}			
+						{
+							drin=true;}
 					}
 				}
 
 				}
 				else{
 						if(token==UNQUOTED_NAME){
-				
+
 						token=_lire_token();
 							if(token==PVIRG)
-						{	
-							drin=true;}			
+						{
+							drin=true;}
 					}
-				}				
-			
-		}		
-		
-	
+				}
 
-  return drin;	
+		}
+
+
+
+  return drin;
 }
 /**************drop_materialized_view_statement ::=  DROP MATERIALIZED VIEW [ IF EXISTS ] view_name;****************/
 boolean drop_materialized_view_statement(){
 	boolean drv=false;
-	
+
 		if(token==MATERIALIZED){
 			token=_lire_token();
 			if(token==VIEW){
@@ -1272,11 +1364,11 @@ boolean drop_materialized_view_statement(){
 								drv=true;
 							}
 					}
-					
+
 			}
-			
+
 	}
-	
+
   }
 
 
@@ -1315,17 +1407,17 @@ boolean drop_role_statement(){
 			if(token==PVIRG){
 				dr=true;
 			}
-		
+
 	}
  }
-	
+
  }
 return dr;
 }
 /************* drop_user_statement::=  DROP USER [ IF EXISTS ] role_name ;*****************************/
 boolean drop_user_statement(){
 	boolean drus=false;
-	
+
 		if(token==USER){
 			token=_lire_token();
 			if(token==IF){
@@ -1343,7 +1435,7 @@ boolean drop_user_statement(){
 		}
 		else{
 			if(role_name())
-			{	
+			{
 				token=_lire_token();
 				if(token==PVIRG)
 				{
@@ -1352,7 +1444,7 @@ boolean drop_user_statement(){
 				}
 		}
 		}
-			
+
 return drus;
 }
 /************** arguments_signature ****************/
@@ -1396,7 +1488,7 @@ boolean table_name_funct(){
 							if(token==POPEN){
 								token=_lire_token();
 							if(arguments_signature()){
-								
+
 									token=_lire_token();
 									if(token==PVIRG){
 									tab=true;
@@ -1407,45 +1499,45 @@ boolean table_name_funct(){
 					else{if(token==PVIRG)
 						{printf(";\n");
 							tab=true;
-				
-							}					
-						
+
+							}
+
 				}
 							}
 
 						}
-	
+
 				else{	if(token==POPEN){
 								token=_lire_token();
 							if(arguments_signature()){
-								
+
 									token=_lire_token();
 									if(token==PVIRG){
 									tab=true;
 													}
 												}
 											}
-										
-							
-									
+
+
+
 			else{if(token==PVIRG)
 						{printf(";\n");
 							tab=true;
-				
-							}					
-						
+
+							}
+
 				}
-				
+
 	}
-	
-}	
+
+}
 return tab;
 }
 
 /***********************drop_function_statement::=  DROP FUNCTION [ IF EXISTS ] function_name [ '(' arguments_signature ')' ];*****************************/
 boolean drop_function_statement(){
 	boolean drfc=false;
-	
+
 		if(token==FUNCTION){
 			token=_lire_token();
 			if(token==IF){
@@ -1454,30 +1546,30 @@ boolean drop_function_statement(){
 					token=_lire_token();
 			if(table_name_funct()){
 				drfc=true;
-				
-						
+
+
 					}
-					
+
 				}
-				
+
 			}
 			else{
 				if(table_name_funct()){
 				drfc=true;
-						
+
 					}
 			}
-			
+
 		}
-		
-	
-	
+
+
+
 	return drfc;
 }
 /***********************drop_aggregate_statement ::=  DROP AGGREGATE [ IF EXISTS ] function_name [ '(' arguments_signature ')' ];*****************************/
 boolean drop_aggregate_statement(){
 	boolean dragg=false;
-	
+
 		if(token==AGGREGATE){
 			token=_lire_token();
 			if(token==IF){
@@ -1485,24 +1577,24 @@ boolean drop_aggregate_statement(){
 				if(token==EXISTS){
 					token=_lire_token();
 					if(table_name_funct()){
-				
+
 								dragg=true;
 							}
 							}
 						}
-					
+
 			else{
 				if(table_name_funct()){
-				
+
 								dragg=true;
 							}
 							}
 						}
-						
-						
-					
 
-	
+
+
+
+
 	return dragg;
 }
 /******************* drop() ****************************/
@@ -1517,7 +1609,7 @@ boolean drop(){
 		if(token==ROLE)		drp=drop_role_statement();
 		if(token==USER)		drp=drop_user_statement();
 		if(token==FUNCTION)	drp=drop_function_statement();
-		if(token==AGGREGATE) drp=drop_aggregate_statement();	
+		if(token==AGGREGATE) drp=drop_aggregate_statement();
 		}
 		return drp;
 }
@@ -1533,7 +1625,7 @@ boolean us_e (){
 		char* logpath=(char*)malloc(sizeof(char));
 		strcpy(logpath,yytext);
 		use_aux(logpath);
-  		token=_lire_token();	
+  		token=_lire_token();
 		if(token==PVIRG){
 				return true;
 						}
@@ -1578,7 +1670,7 @@ boolean column_name(){
 
 						}
 						//else{tab=false;}
-						
+
 
 				}
 				else {printf("geni");follow_token=true;tab=true;}
@@ -1630,7 +1722,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -1641,10 +1733,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 								else if(limit()){
 										token=_lire_token();
@@ -1666,7 +1758,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-								
+
 								else{select=false;}
 
 							}
@@ -1695,7 +1787,7 @@ boolean select_statement(){
 										}
 									else{select=false;}
 
-									
+
 								}
 							else if(limit()){
 										token=_lire_token();
@@ -1717,7 +1809,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-							
+
 							else{select=false;}
 
 						}
@@ -1737,7 +1829,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -1748,10 +1840,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 								else if(limit()){
 										token=_lire_token();
@@ -1763,7 +1855,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -1774,7 +1866,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-								
+
 								else{select=false;}
 
 							}
@@ -1801,10 +1893,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 						else if(limit()){
 										token=_lire_token();
@@ -1816,7 +1908,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -1827,7 +1919,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-						
+
 						else{select=false;}
 							}
 
@@ -1851,7 +1943,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -1862,10 +1954,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 								else if(limit()){
 										token=_lire_token();
@@ -1877,7 +1969,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -1888,7 +1980,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-								
+
 								else{select=false;}
 
 							}
@@ -1905,7 +1997,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -1916,10 +2008,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 							else if(limit()){
 										token=_lire_token();
@@ -1931,7 +2023,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -1942,7 +2034,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-							
+
 							else{select=false;}
 
 						}
@@ -1962,7 +2054,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -1973,10 +2065,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 								else if(limit()){
 										token=_lire_token();
@@ -1988,7 +2080,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -1999,7 +2091,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-								
+
 								else{select=false;}
 
 							}
@@ -2016,7 +2108,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2027,10 +2119,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 					else if(limit()){
 										token=_lire_token();
@@ -2042,7 +2134,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2053,9 +2145,9 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-					
+
 					else{select=false;}
-					
+
 				}
 			}
 			else{printf("From doesn't work");select=false;}
@@ -2096,7 +2188,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2107,10 +2199,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 								else if(limit()){
 										token=_lire_token();
@@ -2132,7 +2224,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-								
+
 								else{select=false;}
 
 							}
@@ -2161,7 +2253,7 @@ boolean select_statement(){
 										}
 									else{select=false;}
 
-									
+
 								}
 							else if(limit()){
 										token=_lire_token();
@@ -2183,7 +2275,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-							
+
 							else{select=false;}
 
 						}
@@ -2203,7 +2295,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2214,10 +2306,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 								else if(limit()){
 										token=_lire_token();
@@ -2229,7 +2321,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2240,7 +2332,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-								
+
 								else{select=false;}
 
 							}
@@ -2269,7 +2361,7 @@ boolean select_statement(){
 									else if(token==PVIRG){select=true;}
 									else{select=false;}
 
-									
+
 								}
 						else if(limit()){
 										token=_lire_token();
@@ -2291,7 +2383,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-						
+
 						else{select=false;}
 							}
 
@@ -2315,7 +2407,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2326,10 +2418,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 								else if(limit()){
 										token=_lire_token();
@@ -2341,7 +2433,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2352,7 +2444,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-								
+
 								else{select=false;}
 
 							}
@@ -2369,7 +2461,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2380,10 +2472,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 							else if(limit()){
 										token=_lire_token();
@@ -2395,7 +2487,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2406,7 +2498,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-							
+
 							else{select=false;}
 
 						}
@@ -2426,7 +2518,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2437,10 +2529,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 								else if(limit()){
 										token=_lire_token();
@@ -2452,7 +2544,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2463,7 +2555,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-								
+
 								else{select=false;}
 
 							}
@@ -2480,7 +2572,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2491,10 +2583,10 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-									
+
 									else{select=false;}
 
-									
+
 								}
 					else if(limit()){
 										token=_lire_token();
@@ -2506,7 +2598,7 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-										
+
 										else{select=false;}
 
 									}
@@ -2517,9 +2609,9 @@ boolean select_statement(){
 											}
 											else{select=false;}
 										}
-					
+
 					else{select=false;}
-					
+
 				}
 			}
 			else{select=false;}
@@ -2653,15 +2745,15 @@ boolean select_clause(){
 			else if(token==FROM){
 				follow_token=true;
 				selecl=true;
-			}	
-			
+			}
+
 		}
 		else if(token==FROM){
 			follow_token=true;
 			selecl=true;
 		}
 		else if(token==VIRG){
-			
+
 					token=_lire_token();
 					if(selector()){
 					token=_lire_token();
@@ -2679,7 +2771,7 @@ boolean select_clause(){
 							}
 				}
 			}
-		
+
 
 
 		}
@@ -2823,7 +2915,7 @@ boolean isrel(){
 		follow_token=true;
 		isr=true;
 	}
-	
+
 }
 boolean relation(){
 	boolean rela=false;
@@ -3063,9 +3155,9 @@ boolean update_statement(){
 						token=_lire_token();
 						if(where()){
 							printf("\n------> where valid");
-							
-							
-							
+
+
+
 								token=_lire_token();
 								if(IF_CLAUSE()){
 									printf("\n--------->if clause");
@@ -3080,7 +3172,7 @@ boolean update_statement(){
 										upd=true;
 									}
 								}
-							
+
 						}
 					}
 
@@ -3319,7 +3411,7 @@ boolean alter_key_space(){
 				if(token==EQ){
 					token=_lire_token();
 					if(map_literal()){
-					token=_lire_token();								
+					token=_lire_token();
 					if(token==AND){
 					token=_lire_token();
 					if(token==DURABLE_WRITES){
@@ -3331,12 +3423,12 @@ boolean alter_key_space(){
 								if(token==PVIRG)
 									return true;
 								}
-								
+
 							}
 						}
 					}
 					else if(token==PVIRG)
-						return true;						
+						return true;
 						}
 					}
 
@@ -3352,18 +3444,18 @@ boolean alter_key_space(){
 								token=_lire_token();
 								if(token==PVIRG)
 									return true;
-								
+
 								}
-								
+
 							}
 						}
-					
+
 				}
-		
+
 			}
-					
+
 		}
-	
+
 return false;
 }
 
@@ -3392,23 +3484,23 @@ boolean Keyspace_aux(){
 
 		if(IDF()){
 					cursor++;
-				
-				
+
+
 								memtable.name=(char*)malloc(48*sizeof(char));
 								strcpy(memtable.name,yytext);
 								printf("\n%s DAMN BOYYYYY\n",memtable.name);
-					
+
 
 					token=_lire_token();
 					if(token==WITH_REPLICATION){
 						cursor=cursor+2;
 						token=_lire_token();
-						if(token==EQ){ 
+						if(token==EQ){
 							cursor++;
 							token=_lire_token();
 							if(map_keyspace()){
 								cursor++;
-								token=_lire_token();								
+								token=_lire_token();
 								if(token==AND){
 									cursor++;
 									token=_lire_token();
@@ -3432,13 +3524,13 @@ boolean Keyspace_aux(){
 									}
 									else if(token==PVIRG){
 													memtable.success=1;
-													return true;	}				
+													return true;	}
 								}
 							}
 
 
 						}
-		
+
 					}
 memtable.success=0;
 return false;
@@ -3458,7 +3550,7 @@ boolean create_key_space(){
 					strcpy(keys_name,yytext);
 					if(fopen(keys_name,"r")!=NULL){
 								errs=creer_semantic_error(KAE,cursor,errs);
-								
+
 					}
 					int i=nbr_semantic_errors(errs);
 					if(i>1){
@@ -3481,10 +3573,10 @@ boolean create_key_space(){
 						 create_json_keyspace();
 							return true;
 					}
-					
+
 				}
 
-			}		
+			}
 		}
 return false;
 }
@@ -3500,7 +3592,7 @@ column_name
 | ( column_name1
         , column_name2, column_name3 ... )
 | ((column_name1*, column_name2*), column3*, column4* . . . )
-      
+
 
 column_name1 is the partition key.
 
@@ -3527,17 +3619,17 @@ boolean partition_key_aux(){
 			pri->partition=1;
 			pri->name=(char*)malloc(sizeof(char));
 			strcpy(pri->name,yytext);
-			pri->next=NULL;	
+			pri->next=NULL;
 			token=_lire_token();
 		if(token==VIRG){
 				token=_lire_token();
 				return partition_key_aux();
-				}	
-		if(token==PCLOSE){		
+				}
+		if(token==PCLOSE){
 					return true;
 
 	}
-}		
+}
 	return false;
 }
 
@@ -3546,12 +3638,12 @@ boolean partition_key(){
 
 	table_options* p=tables->fields;
 
-	if(IDF()) 
+	if(IDF())
 		{	while(p->next && p->primary==NULL){
-			 	p->data=NULL;
+		//	 	p->data=NULL;
 			 	p=p->next;
 			 }
-			
+
 				if(p->primary){
 					errs=creer_semantic_error(DPK,cursor,errs);
 					return false;
@@ -3566,10 +3658,10 @@ boolean partition_key(){
 		}
 	if(token==POPEN){
 			while(p->next&& p->primary==NULL){
-				p->data=NULL;
+			//	p->data=NULL;
 			 	p=p->next;
 			}
-			
+
 			if(p){
 				if(p->primary){
 					errs=creer_semantic_error(DPK,cursor,errs);
@@ -3596,7 +3688,7 @@ return false;
 boolean clustering_columns(){
 	table_options* p=tables->fields;
 	primary * pri=NULL;
-	if(IDF()){	
+	if(IDF()){
 		while(p->next && p->primary==NULL)
 			 	p=p->next;
 			}
@@ -3614,11 +3706,11 @@ boolean clustering_columns(){
 		if(token==VIRG){
 			token=_lire_token();
 			return clustering_columns();
-		}		
+		}
 	if(token==PCLOSE)
 		return true;
 
-	return false;			
+	return false;
 }
 
 
@@ -3627,7 +3719,7 @@ boolean clustering_columns(){
 //PRI_KEY: '(' Partition_key ')' | '(' Partition_key PRI_KEY_AUX
 
 boolean pri_key(){
-	
+
 	token=_lire_token();
 	if(token==POPEN){
 		token=_lire_token();
@@ -3639,9 +3731,9 @@ boolean pri_key(){
 				if(token==VIRG){
 					token=_lire_token();
 					return clustering_columns();
-				}		
+				}
 			}
-		}		
+		}
 	}
 return false;
 }
@@ -3669,10 +3761,10 @@ column_name cql_type
 boolean column_def_aux(){
 	boolean b=true;
 	table_options *p=tables->fields;
-	if(cql_type()){		
-		
+	if(cql_type()){
+
 		if(token==BIGGER){
-			b=false;
+			b=false;//= true????
 		}
 		token=_lire_token();
 		if(token==PRIMARY_KEY){
@@ -3690,7 +3782,7 @@ boolean column_def_aux(){
 			b=true;
 		}
 		if(token==PCLOSE ||token==VIRG){
-			follow_token=true;	
+			follow_token=true;
 			b=true;
 			}
 	}
@@ -3699,6 +3791,7 @@ return b;
 }
 
 //column_def_part: IDF column_def_aux | PRIMARY_KEY PRI_KEY
+//CATCH THE TYPES OF VARIABLES
 boolean column_def_part(){
 	table_options*p;
 	if(IDF()){
@@ -3709,7 +3802,6 @@ boolean column_def_part(){
 		else{
 			p=tables->fields;
 			while(p->next){
-				p->data=NULL;
 				p=p->next;
 			}
 			p->next=(table_options*)malloc(sizeof(table_options));
@@ -3734,7 +3826,7 @@ boolean column_def_part(){
 return false;
 }
 
-//column_definition: '(' column_def_part ')' | '(' column_def_part ',' column_def_part   
+//column_definition: '(' column_def_part ')' | '(' column_def_part ',' column_def_part
 boolean column_definition(){
 	if(column_def_part()){
 		token=_lire_token();
@@ -3743,12 +3835,12 @@ boolean column_definition(){
 			follow_token=true;
 			return true;
 
-		}	
-		if(token==VIRG){ 	
+		}
+		if(token==VIRG){
 			token=_lire_token();
 			return column_definition();
 		}
-	
+
 	}
 
 return false;
@@ -3757,7 +3849,6 @@ return false;
 
 
 boolean Keyspace_per_create(){
-
 if(IDF()){
 			char* keys=(char*)malloc(48*sizeof(char));
 			char* key=(char*)malloc(48*sizeof(char));
@@ -3767,9 +3858,11 @@ if(IDF()){
 			l->fields=NULL;
 			token=_lire_token();
 					if(token==POINT){
-						token=_lire_token();
-						if(IDF())
-							{	strcat(keys,"/");
+						token=_lire_token();	
+						printf("this is the text %s\n",yytext);
+						if(true)
+							{	
+								strcat(keys,"/");
 								strcat(keys,"keyspace.txt");
 								file=fopen(keys,"r");
 								char *testagain=(char*)malloc(48*sizeof(char));
@@ -3790,7 +3883,7 @@ if(IDF()){
 					 				if(file!=NULL){
 					 					errs=creer_semantic_error(TAE,cursor,errs);
 					 				}
-					 				else{			 					
+					 				else{
 					 					l->next=tables;
 		    							tables=l;
 					 					return true;
@@ -3799,7 +3892,7 @@ if(IDF()){
 								//return true;
 							}
 					}
-					else 
+					else
 					 {//keyspace par defaut
 					 	char *testagain=(char*)malloc(sizeof(char));
 					 		l->name=(char*)malloc(sizeof(char));
@@ -3815,7 +3908,7 @@ if(IDF()){
 					 				errs=creer_semantic_error(TAE,cursor,errs);
 					 				//		errs=errs->next;
 					 			}
-					 			else{	
+					 			else{
 		    						follow_token=true;
 		    						fclose(file);
 		    						l->next=tables;
@@ -3829,7 +3922,7 @@ if(IDF()){
 return false;
 }
 
-/*create_table_aux_1: keyspace_name.table_name 
+/*create_table_aux_1: keyspace_name.table_name
 ( column_definition, column_definition, ...) */
 boolean create_table_aux_1(){
 if(Keyspace_per_create()){
@@ -3840,11 +3933,11 @@ if(Keyspace_per_create()){
 
 									return true;
 								}
-									
-								
+
+
 							}
 	}
-				
+
 				return false;
 }
 
@@ -3865,7 +3958,7 @@ boolean create_table(){
 						b=true;
 					}
 				}
-			}else  
+			}else{printf("no use?");
 				if(create_table_aux_1()){
 
 					token=_lire_token();
@@ -3874,13 +3967,14 @@ boolean create_table(){
 						b=true;
 					}
 				}
+				}
 		}
 	if(b==true){
 		if(addTable_Keyspace()==true){
 		write_table();
 		memtable.tables=tables;
 	}
-		else 
+		else
 			b=false;
 
 	}
@@ -3942,7 +4036,7 @@ boolean alter_table_inst_add(){
 return false;
 }
 
-//DROP column_name 
+//DROP column_name
 
 boolean alter_table_inst_drop(){
 		if(token==DROP)
@@ -3953,7 +4047,7 @@ boolean alter_table_inst_drop(){
 return false;
 }
 
-//RENAME column_name TO column_name 
+//RENAME column_name TO column_name
 boolean alter_table_inst_rename(){
 	if(token==RENAME)
 	{	token=_lire_token();
@@ -4002,7 +4096,7 @@ boolean alter_table(){
 						return true;
 					}
 				}
-			
+
 }
 return false;
 }
@@ -4034,7 +4128,7 @@ return create_table_keyspace();}
  if(token==USE){token=_lire_token();
     return us_e();}
  if(select_statement()){return true;}
- 
+
  if(update_statement()){return true;}
  return false;
 }
@@ -4047,38 +4141,42 @@ return create_table_keyspace();}
 void read_json(char * logpath){
 tab_op*p;
 root = json_load_file(logpath,0, &error);
-  	if(root==NULL)
+if(root==NULL)
+{
+ 	errs=creer_semantic_error(KDE,cursor,errs);
+}
+else{
+  	data=json_array_get(root,0);
+ 	memtable.name=(char*)malloc(sizeof(char));
+  	strcpy(memtable.name,json_string_value(json_object_get(data,"keyspace name")));
+ 	memtable.class=(char*)malloc(sizeof(char));
+  	strcpy(memtable.class,json_string_value(json_object_get(data,"class")));
+  	json_t * imthetable=json_array_get(root,1);
+  	imthetable=json_object_get(imthetable,"tables");
+  	size_t k=json_array_size(imthetable);
+  	for(int i=0;i<k;i++)
   	{
-  		errs=creer_semantic_error(KDE,cursor,errs);
-  	}
-  	else{
-  		data=json_array_get(root,0);
-  		memtable.name=(char*)malloc(sizeof(char));
-  		strcpy(memtable.name,json_string_value(json_object_get(data,"keyspace name")));
-  		memtable.class=(char*)malloc(sizeof(char));
-  		strcpy(memtable.class,json_string_value(json_object_get(data,"class")));
-  		
-  		json_t * imthetable=json_array_get(root,1);
-  		size_t k=json_array_size(imthetable);
-  		for(int i=0;i<k;i++)
-  		{	if(i==0 && tables==NULL){
+  		if(i==0 && tables==NULL){
   			tables=(tab_op*)malloc(sizeof(tab_op));
   			tables->keyspace_name=(char*)malloc(sizeof(char));
   			tables->name=(char*)malloc(sizeof(char));
   			strcpy(tables->name,json_string_value(json_array_get(imthetable,i)));
   			strcpy(tables->keyspace_name,memtable.name);
   			tables->next=NULL;
-  		}else{
+  		}
+  		else{
   			p=(tab_op*)malloc(sizeof(tab_op));
   			p->keyspace_name=(char*)malloc(sizeof(char));
   			p->name=(char*)malloc(sizeof(char));
   			strcpy(p->name,json_string_value(json_array_get(imthetable,i)));
   			strcpy(p->keyspace_name,memtable.name);
   			p->next=tables;
+  			tables=p;
   		}
-  		}
-		memtable.tables=tables;
-	}
+  	}
+  	//tables->fields=read_table(tables->name,tables->keyspace_name);//Pour l'instant je veux la premiere
+	memtable.tables=tables;
+}
 }
 //ADDING A TABLE TO THE JSON KEYSPACE AND CREATING ITS FILE IF NOT ( IT DEPENDS ON WHETHER WE USE THE OPTION  IF EXISTS OR NOT)
 boolean addTable_Keyspace(){
@@ -4095,7 +4193,6 @@ boolean addTable_Keyspace(){
 				return false;
 				}
 		}
-
 		json_array_append_new(tab_values,json_string(tables->name));
 		json_object_set(tab,"tables",tab_values);
 		json_array_set(root,1,tab);
@@ -4112,7 +4209,7 @@ boolean addTable_Keyspace(){
 		return true;
 }
 
-//creation de keyspace 
+//creation de keyspace
 
 void create_json_keyspace(){
 		json_t*T;
@@ -4137,7 +4234,108 @@ void create_json_keyspace(){
 							memtable.tables=NULL;
 }
 
+
+
+//Interpreter Tokens
+char * token_interp(typetoken tok){
+	switch(tok){
+		case ASCII:
+			return "ascii";
+			break;
+		case BIGINT :
+			return "bigint";
+			break;
+		case BLOB :
+			return "blob";
+			break;
+		case BOOLEAN:
+			return "boolean";
+			break;
+		case COUNTER:
+			return "counter";
+			break;
+		case DATE:
+			return "date";
+			break;
+		case DECIMAL:
+			return "decimal";
+			break;
+		case DOUBLE:
+			return "double";
+			break;
+		case FLOAT:
+			return "float";
+			break;
+		case INET:
+			return "inet";
+			break;
+		case INT:
+			return "int";
+			break;
+		case SMALLINT:
+			return "smallint";
+			break;
+		case TEXT:
+			return "text";
+			break;
+		case TIME:
+			return "time";
+			break;
+		case TIMESTAMP:
+			return "timestamp";
+			break;
+		case TIMEUUID:
+			return "timeuuid";
+			break;												
+		case TINYINT:
+			return "tinyint";
+			break;
+		case UUID:
+			return "uuid";
+			break;
+		case VARCHAR:
+			return "varchar";
+			break;
+		case VARINT:
+			return "varint";
+			break;
+	}
+	return NULL;
+}
+
+char * type_interpreter(terms_types * t){
+	char * type=type=(char*)malloc(sizeof(char));
+	switch(t->vartype){
+		case MAP:
+		case MAP_LIT:
+			strcpy(type,"Map<");
+			strcat(type,type_interpreter(t->term.Map->key));
+			strcat(type,",");
+			strcat(type,type_interpreter(t->term.Map->value));
+			strcat(type,">");
+			break;
+		case SET:
+		case SET_LIT:
+			strcpy(type,"Set<");
+			strcat(type,type_interpreter(t->term.Set->terms));
+			strcat(type,">");
+			break;
+		case LIST:	
+			strcpy(type,"List<");
+			strcat(type,type_interpreter(t->term.List->terms));
+			strcat(type,">");
+			break;
+		default:
+			strcpy(type,token_interp(t->vartype));
+			break;
+	}
+	return type;
+}
+
+
+//to be modified
 void write_table(){
+	terms_types* t_t=NULL;
 	table_options*p=tables->fields;
 	primary *pri=NULL;
 	json_t* root_table=json_array();
@@ -4145,8 +4343,10 @@ void write_table(){
 	json_t* primary_fields=json_object();
 	while(p){
 		if(p->name){
-			printf("name :%s type : %s DFON\n",p->name,p->type);
-			json_object_set_new(table_fields,p->name,json_string(p->type));
+			t_t=p->type;
+
+			printf("name :%s type : %s\n",p->name,type_interpreter(t_t));
+			json_object_set_new(table_fields,p->name,json_string(type_interpreter(t_t)));
 		}
 		if(p->primary){
 			pri=p->primary;
@@ -4168,13 +4368,100 @@ void write_table(){
 	printf("%s",path);
 	json_dump_file(root_table,path,0);
 }
+//read table from name
+/*table_options *read_table(char * table_name, char *keyspace_name){
+	table_options* champs=NULL;
+	table_options* p=NULL;
+	primary * r=NULL;
+	char *path=(char*)malloc(sizeof(char)*100);
+	strcpy(path,keyspace_name);
+	strcat(path,"/");
+	strcat(path,table_name);
+	strcat(path,"/table.txt");
+	root = json_load_file(path,0, &error);
+  	json_t * fields=json_array_get(root,0);
+  	const char *key;
+	json_t *value;
+  	json_object_foreach(fields, key, value){
+  		if(champs==NULL){
+  			champs=(table_options*)malloc(sizeof(table_options));
+  			champs->name=(char*)malloc(sizeof(char));
+  			champs->type=(char*)malloc(sizeof(char));
+  			strcpy(champs->name,key);
+  			strcpy(champs->type,json_string_value(value));
+  			champs->next=NULL;
+  			champs->data=NULL;//Cachh me ousside how abou dat?
+  			champs->primary=NULL;
+  		}else{
+  			p=champs;
+  			while(p->next){
+  				p=p->next;
+  			}
+  			p->next=(table_options*)malloc(sizeof(table_options));
+  			p->next->name=(char*)malloc(sizeof(char));
+  			p->next->type=(char*)malloc(sizeof(char));
+  			strcpy(p->next->name,key);
+  			strcpy(p->next->type,json_string_value(value));
+  			p->next->next=NULL;
+  			p->next->data=NULL;//Cachh me ousside how abou dat?
+  			p->next->primary=NULL;
+  		}
+  	}
+  	 fields=json_array_get(root,1);
+  	 int i=json_object_size(fields);
+  	 if(i<=1 && i>=0){
+  	 	p=champs;
+  	 	while(p){
+  	 	if(p->name && json_object_get(fields,p->name)!=NULL){
+  	 		p->primary=(primary*)malloc(sizeof(primary));
+  	 		p->primary->name=(char*)malloc(sizeof(char));
+  	 		strcpy(p->primary->name,p->name);
+  	 		p->primary->next=NULL;
+  	 		p->primary->partition=1;
+  	 	}
+  	 	p=p->next;}
+  	 }
 
-void afficherhadchi(){
+  	 else if(i>1){
+  	 	p=champs;
+  	 	while(p->next)
+  	 		p=p->next;
+  	 		p->next=(table_options*)malloc(sizeof(table_options));
+  	 		p=p->next;
+  	 		p->name=NULL;
+  	 		p->type=NULL;
+  	 		p->next=NULL;
+  	 		p->primary=NULL;
+  	 	json_object_foreach(fields, key, value){
+  	 		if(p->primary==NULL){
+  	 			p->primary=(primary*)malloc(sizeof(primary));
+  	 			p->primary->name=(char*)malloc(sizeof(char));
+  	 			strcpy(p->primary->name,key);
+  	 			p->primary->partition=(int)json_integer_value(value);
+  	 			p->primary->next=NULL;
+  	 		}else
+  	 		{
+  	 			r=p->primary;
+  	 			while(r->next!=NULL)
+  	 				r=r->next;
+  	 			r->next=(primary*)malloc(sizeof(primary));
+  	 			r=r->next;
+  	 			r->name=(char*)malloc(sizeof(char));
+  	 			strcpy(r->name,key);
+  	 			r->partition=(int)json_integer_value(value);
+  	 			r->next=NULL;
+  	 		}
+  	 	}
+
+  	 }
+  	 return champs;
+}*/
+/*void afficherhadchi(){
 	table_options* p =tables->fields;
 	primary * pri=NULL;
 	while(p){
 		if(p->name)
-		{	
+		{
 			printf("-----------------------------\nname : %s\n type %s\n",p->name,p->type);
 		}
 		pri=p->primary;
@@ -4184,7 +4471,7 @@ void afficherhadchi(){
 		}
 		p=p->next;
 	}
-}
+}*/
 
 int main(){
 memtable.name=NULL;
@@ -4206,11 +4493,11 @@ memtable.class=NULL;
 	d=Analyse_syntaxique();
 	if(d==true){
 		//afficher_semantic_error(errors);
-		afficherhadchi();
+	//	afficherhadchi();
+		afficher_semantic_error(errs);
 
 	}
 	else{printf("it doesn't\n");
 
 	afficher_semantic_error(errs);}
 }
-

@@ -1,6 +1,6 @@
 
 
-typedef enum { QUOTED_IDF,UNQUOTED_IDF,UNQUOTED_NAME,QUOTED_NAME,INDEX_NAME,VIEW,VIEW_NAME,MATERIALIZED,USE,USER,ROLE,FUNCTION,IN,CONTAINS,AGGREGATE,BIGGEREQ,LESSEREQ,DIFF,
+typedef enum {QUOTED_IDF,UNQUOTED_IDF,UNQUOTED_NAME,QUOTED_NAME,INDEX_NAME,VIEW,VIEW_NAME,MATERIALIZED,USE,USER,ROLE,FUNCTION,IN,CONTAINS,AGGREGATE,BIGGEREQ,LESSEREQ,DIFF,
 CREATE, INSERT, UPDATE, DELETE, INTO, MULT, PLUS, DROP, ALTER, SET, WHERE,WITH,DURABLE_WRITES,WITH_REPLICATION, FROM,VALUES, IF, EXISTS,BATCH, BEG_IN, PUT,RENAME,KEYSPACE,SCHEMA,TABLE,NOT_EXISTS,AND, APPLY, EQ,ADD, MINUS,DIV,INDEX, ASCII,BIGINT,BLOB, COUNTER,DECIMAL,DOUBLE,FLOAT,INET,INT,TEXT,TIMEUUID,UUID,INUMBER, DNUMBER,STRING,BLOB_TOKEN,UUID_TOKEN,
 VARCHAR,VARINT,LIST, MAP,SET_T,TUPLE,DESCRIBE,TYPE,TYPES,PRIMARY_KEY,ALL,KEY,POPEN,PCLOSE,BOPEN,BCLOSE,VIRG,PVIRG,LESSER,TTL,TIMESTAMP,
 BIGGER,TWOP,ACOLO,ACOLF,CROPEN,CRCLOSE,ENTER,POINT,USING,QST,TRUE,APOST,SET_LIT,MAP_LIT,UDT_LIT,FALSE,TO_TOKEN ,SELECT,HEX,BOOLEAN,SMALLINT,DATE,ERRORLEX,TIME,TINYINT,STRING_TOKEN,
@@ -8,6 +8,36 @@ GROUP,ORDER,TOKEN,PER,LIMIT,CONT_KEY,ALLOW,/*TOKENS OUSSAMA 14/12/2016*/DISTINCT
 typedef enum{SimpleStr,NTS}class_types;
 typedef enum{false=0,true=1}boolean;
 
+//THE NEW STRUCTURE
+
+typedef struct ___map* _map;
+typedef struct ___setlist* _setlist;
+//typedef enum{MapLit,SetLit,ListLit,String,Integer,Blob,Bool,Float,Uuid}cqlTypes;
+
+
+typedef struct _terms_types{
+ union {
+	_map Map;
+	_setlist List;
+	_setlist Set;
+	char* data;
+	}term;
+ //	cqlTypes termtype;
+ 	typetoken vartype;
+}terms_types;
+
+typedef struct ___map{
+	terms_types *key;
+	terms_types *value;
+	_map next;
+}__map;
+typedef struct ___setlist{
+	terms_types * terms;
+	_setlist * next;
+}__setlist;
+
+
+//type data was depricated !
 typedef struct data
 {
 char * value;
@@ -23,9 +53,9 @@ typedef struct prim{
 typedef struct table{
 
 	char* name;
-	char* type;
+	terms_types* type;//char * is going to be replaced by the new type
 	primary* primary;
-	table_data * data;
+//	table_data* data;//this is going to be removed
 	struct table* next;
 }table_options;
 
@@ -35,6 +65,7 @@ typedef struct tab{
 	table_options* fields;
 	struct tab* next;
 }tab_op;
+
 
 typedef struct keyspace_options{
 		char* name;
@@ -188,3 +219,4 @@ void read_json(char *);
 boolean addTable_Keyspace();
 void write_table();
 void create_json_keyspace();
+table_options *read_table(char * table_name, char *keyspace_name);

@@ -87,15 +87,98 @@ terms_types *utype;//the type in the next function call
 			break;				
 		}
 	}
-		return type;
+		return NULL;
+}
+void * replire_type_aux(typetoken tok, terms_types* t_t){
+				switch(t_t->vartype){
+					case MAP :
+					case MAP_LIT:
+						if(t_t->term.Map->key==NULL){
+							t_t->term.Map->key=(terms_types*)malloc(sizeof(terms_types));
+							t_t->term.Map->key->vartype=tok;
+						}else
+						{
+							if(t_t->term.Map->value==NULL){
+							t_t->term.Map->value=(terms_types*)malloc(sizeof(terms_types));
+							t_t->term.Map->value->vartype=tok;
+							}
+						}
+						break;
+					case SET :
+					case  SET_LIT :	
+						t_t->term.Set->terms=(terms_types*)malloc(sizeof(terms_types));
+						t_t->term.Set->terms->vartype=tok;
+						break;
+					case LIST:
+						t_t->term.List->terms=(terms_types*)malloc(sizeof(terms_types));
+						t_t->term.List->terms->vartype=tok;
+						break;
+					default :
+						t_t->vartype=tok;
+						t_t->term.data=NULL;
+						break;
+				}
+
 }
 
+//remplir type 
+void * replire_type(typetoken tok, table_options * T){
+	terms_types * t_t=NULL;
+	table_options * p=T;
+				switch(tok){
+					case MAP :
+					case MAP_LIT:
+					if(p->type==NULL){
+						p->type=(terms_types*)malloc(sizeof(terms_types));
+						p->type->vartype=tok;
+						p->type->term.Map=(_map)malloc(sizeof(__map));
+						p->type->term.Map->key=NULL;
+						p->type->term.Map->value=NULL;
+					}else{
+						t_t=navigate_type(p->type);//BS
+						replire_type_aux(tok,t_t);
+					}
+						break;
+					case SET :
+					case  SET_LIT :	
+					if(p->type==NULL){
+						p->type=(terms_types*)malloc(sizeof(terms_types));
+						p->type->vartype=tok;
+						p->type->term.Set=(_setlist)malloc(sizeof(__setlist));
+					}else{
+						t_t=navigate_type(p->type);//BS
+						replire_type_aux(tok,t_t);
+						
+					}
+						break;
+					case LIST:
+					if(p->type==NULL){
+						p->type=(terms_types*)malloc(sizeof(terms_types));
+						p->type->vartype=tok;
+						p->type->term.List=(_setlist)malloc(sizeof(__setlist));
+						}
+					else{
+						t_t=navigate_type(p->type);//BS
+						replire_type_aux(tok,t_t);
+					}	
+						break;
+					default :
+					if(p->type==NULL){
+						p->type=(terms_types*)malloc(sizeof(terms_types));
+						p->type->vartype=tok;
+						p->type->term.data=NULL;
+						}else{
+						t_t=navigate_type(p->type);	
+						replire_type_aux(tok,t_t);
+						}
+						break;
+				}
+}
 
 
 //native_type ::=  ASCII| BIGINT | BLOB| BOOLEAN| COUNTER| DATE| DECIMAL| DOUBLE| FLOAT| INET| INT| SMALLINT| TEXT| TIME| TIMESTAMP| TIMEUUID| TINYINT| UUID| VARCHAR | VARINT
 
 boolean native_type(){
-		terms_types * t_t=NULL;
 		table_options * p=tables->fields;
 		boolean native=false;
 		if(token==ASCII){native=true;}
@@ -119,7 +202,7 @@ boolean native_type(){
 		else if(token==VARCHAR){native=true;}
 		else if(token==VARINT){native=true;}
 		if(native==true){
-			while(p->next){
+		/*	while(p->next){
 				p=p->next;
 			}
 			if(p->type==NULL){
@@ -160,7 +243,7 @@ boolean native_type(){
 						break;
 
 				}
-		}
+		}*/
 		}
 		return native;
 
@@ -357,12 +440,15 @@ boolean collection_type(){
 			while(p->next){
 				p=p->next;
 			}
-			if(p->type==NULL){
+			/*if(p->type==NULL){
+				p->
+
 		//		p->type=(char*)malloc(sizeof(char)*48);
 			//	strcpy(p->type,yytext);
 		}else{
 			//	strcat(p->type,yytext);
-		}
+		}*/
+
 		token=_lire_token();
 		if(token==LESSER){
 		//	strcat(p->type,yytext);

@@ -4,6 +4,17 @@
 #include <string.h>
 #include <jansson.h>
 #include "error.h"
+
+
+//TO DO LIST
+/*
+NESTED COLLECTION TYPES
+TYPE TUPLE, I FORGOT ABOUT IT
+VERIFY IF NETWORK TOPOLOGY WORKS WITH THIS SHIT
+CHECK THE LOADING TABLES PROCESS WITH THE NEW STRUCTURE (JESUS CHRIST)
+IGNORE MY EX CAUSE SHE IS WASTING MY TIME AND MAKING ME HORNY FOR NO REASON
+*/
+
 extern char* yytext;
 char* prt;
 
@@ -11,7 +22,7 @@ primary *pr=NULL;
 table_options *used=NULL;
 tab_op *tables=NULL;
 table_options *current=NULL;
-
+typetoken current_type=FALSE;
 int insert_ordre=0;
 FILE *file;
 keyspace_options memtable;
@@ -28,6 +39,29 @@ json_t *parser;
 json_error_t error;
 //extern int yylex(); d
 boolean follow_token=false;
+table_data *values;
+table_data remplir_values(table_data* v,char *value,typetoken tk){
+table_data *p=NULL;
+	if(v==NULL){
+		v=(table_data*)malloc(sizeof(table_data));
+		v->value=(char*)malloc(sizeof(char));
+		v->type=tk;
+		v->next=NULL;
+		strcpy(v->value,value);
+	}else{
+		p=v;
+		while(p->next)
+			p=p->next;
+		p->next=(table_data*)malloc(sizeof(table_data));
+		p=p->next;
+		p->value=(char*)malloc(sizeof(char));
+		p->type=tk;
+		p->next=NULL;
+		strcpy(p->value,value);
+	}
+	return v;
+}
+
 typetoken _lire_token(){
 	if(follow_token){
 	follow_token=false;//remise a zero du marqueur de surlecture
@@ -62,7 +96,7 @@ terms_types *utype;//the type in the next function call
 		case MAP:
 		case MAP_LIT:
 			utype=type->term.Map->key;
-			if(navigate_type(utype)->vartype!=MAP && navigate_type(utype)->vartype!=MAP_LIT && navigate_type(utype)->vartype!=SET && navigate_type(utype)->vartype!=SET_LIT && navigate_type(utype)->vartype!=LIST)
+			if(navigate_type(utype)==NULL || (navigate_type(utype)->vartype!=MAP && navigate_type(utype)->vartype!=MAP_LIT && navigate_type(utype)->vartype!=SET && navigate_type(utype)->vartype!=SET_LIT && navigate_type(utype)->vartype!=LIST))
 				return type;
 			else
 				return navigate_type(type);
@@ -70,14 +104,14 @@ terms_types *utype;//the type in the next function call
 		case SET :
 		case  SET_LIT :
 			utype=type->term.Set->terms;
-			if(navigate_type(utype)->vartype!=MAP && navigate_type(utype)->vartype!=MAP_LIT && navigate_type(utype)->vartype!=SET && navigate_type(utype)->vartype!=SET_LIT && navigate_type(utype)->vartype!=LIST)
+			if(navigate_type(utype)==NULL || (navigate_type(utype)->vartype!=MAP && navigate_type(utype)->vartype!=MAP_LIT && navigate_type(utype)->vartype!=SET && navigate_type(utype)->vartype!=SET_LIT && navigate_type(utype)->vartype!=LIST))
 				return type;
 			else
 				return navigate_type(type);
 			break;
 		case LIST :
 			utype=type->term.List->terms;
-		if(navigate_type(utype)->vartype!=MAP && navigate_type(utype)->vartype!=MAP_LIT && navigate_type(utype)->vartype!=SET && navigate_type(utype)->vartype!=SET_LIT && navigate_type(utype)->vartype!=LIST)
+		if(navigate_type(utype)==NULL || (navigate_type(utype)->vartype!=MAP && navigate_type(utype)->vartype!=MAP_LIT && navigate_type(utype)->vartype!=SET && navigate_type(utype)->vartype!=SET_LIT && navigate_type(utype)->vartype!=LIST))
 				return type;
 			else
 				return navigate_type(type);
@@ -89,7 +123,8 @@ terms_types *utype;//the type in the next function call
 	}
 		return NULL;
 }
-void * replire_type_aux(typetoken tok, terms_types* t_t){
+void * remplire_type_aux(typetoken tok, terms_types* t_t){
+	printf("Segmentation fault here REMPLIRE_AUX BEGIN\n");
 				switch(t_t->vartype){
 					case MAP :
 					case MAP_LIT:
@@ -118,13 +153,15 @@ void * replire_type_aux(typetoken tok, terms_types* t_t){
 						t_t->term.data=NULL;
 						break;
 				}
+				printf("Segmentation fault here REMPLIRE_AUX FIN\n");
 
 }
 
 //remplir type 
-void * replire_type(typetoken tok, table_options * T){
+void * remplire_type(typetoken tok, table_options * T){
 	terms_types * t_t=NULL;
 	table_options * p=T;
+	printf("Segmentation fault here REMPLIRE BEGIN\n");
 				switch(tok){
 					case MAP :
 					case MAP_LIT:
@@ -136,7 +173,7 @@ void * replire_type(typetoken tok, table_options * T){
 						p->type->term.Map->value=NULL;
 					}else{
 						t_t=navigate_type(p->type);//BS
-						replire_type_aux(tok,t_t);
+						remplire_type_aux(tok,t_t);
 					}
 						break;
 					case SET :
@@ -147,7 +184,7 @@ void * replire_type(typetoken tok, table_options * T){
 						p->type->term.Set=(_setlist)malloc(sizeof(__setlist));
 					}else{
 						t_t=navigate_type(p->type);//BS
-						replire_type_aux(tok,t_t);
+						remplire_type_aux(tok,t_t);
 						
 					}
 						break;
@@ -159,7 +196,7 @@ void * replire_type(typetoken tok, table_options * T){
 						}
 					else{
 						t_t=navigate_type(p->type);//BS
-						replire_type_aux(tok,t_t);
+						remplire_type_aux(tok,t_t);
 					}	
 						break;
 					default :
@@ -167,18 +204,21 @@ void * replire_type(typetoken tok, table_options * T){
 						p->type=(terms_types*)malloc(sizeof(terms_types));
 						p->type->vartype=tok;
 						p->type->term.data=NULL;
-						}else{
+						}else{printf("Noooo\n");
 						t_t=navigate_type(p->type);	
-						replire_type_aux(tok,t_t);
+
+						remplire_type_aux(tok,t_t);
 						}
 						break;
 				}
+				printf("Segmentation fault here REMPLIRE FINAL\n");
 }
 
-
+//THE PROBLEM IS NESTING MAPS
 //native_type ::=  ASCII| BIGINT | BLOB| BOOLEAN| COUNTER| DATE| DECIMAL| DOUBLE| FLOAT| INET| INT| SMALLINT| TEXT| TIME| TIMESTAMP| TIMEUUID| TINYINT| UUID| VARCHAR | VARINT
 
 boolean native_type(){
+	printf("Segmentation fault here NATIVE TYPE BEGIN\n");
 		table_options * p=tables->fields;
 		boolean native=false;
 		if(token==ASCII){native=true;}
@@ -202,10 +242,11 @@ boolean native_type(){
 		else if(token==VARCHAR){native=true;}
 		else if(token==VARINT){native=true;}
 		if(native==true){
-		/*	while(p->next){
+		while(p->next){
 				p=p->next;
-			}
-			if(p->type==NULL){
+		}
+		remplire_type(token,p);
+		/*	if(p->type==NULL){
 				p->type=(terms_types*)malloc(sizeof(terms_types));
 				p->type->vartype=token;
 				p->type->term.data=NULL;
@@ -245,6 +286,7 @@ boolean native_type(){
 				}
 		}*/
 		}
+		printf("Segmentation fault here NATIVE TYPE FINISH\n");
 		return native;
 
 }
@@ -266,35 +308,29 @@ boolean IDF(){
 		}
 		return idf;
 }
-/*
-boolean type_interpreter(typetoken tok,char * type){
+//VERIFY LE TOKEN TOK DES DONNEES ET SON COMPATIBLITER AVEC LE TOKEN DU TYPE DU VARIABLE
+boolean type_interpreter(typetoken tok,typetoken type){
 	switch(tok){
 		case INUMBER:
-			if(strcmp(type,"int")==0||strcmp(type,"smallint")==0||strcmp(type,"bigint")==0||strcmp(type,"decimal")==0||strcmp(type,"tinyint")==0)
+			if(type==INT||type==SMALLINT||type==BIGINT||type==DECIMAL||type==TINYINT)
 				return true;
 			break;
 		case DNUMBER :
-			if(strcmp(type,"float")==0||strcmp(type,"double")==0)
+			if(type==FLOAT||type==DOUBLE)
 				return true;
 			break;
 		case TRUE :
-			if(strcmp(type,"boolean")==0)
-				return true;
-			break;
 		case FALSE:
-			if(strcmp(type,"boolean")==0)
-				return true;
-			break;
-		case UUID_TOKEN:
-			if(strcmp(type,"text")==0||strcmp(type,"varchar")==0)
+			if(type==BOOLEAN)
 				return true;
 			break;
 		case HEX:
-			if(strcmp(type,"text")==0||strcmp(type,"varchar")==0)
+		case UUID_TOKEN:
+			if(type==TEXT||type==VAR)
 				return true;
 			break;
 		case BLOB:
-			if(strcmp(type,"blob")==0)
+			if(type==BLOB)
 				return true;
 			break;
 		default :
@@ -303,16 +339,118 @@ boolean type_interpreter(typetoken tok,char * type){
 	}
 	return false;
 }
-//
-boolean copy_data(typetoken tok,int ordre){
+
+//INT ordre signifie dans quel variable va t'on ecrire la valeur car on peut avoir insert values({first tuple of values},{second tuple of values}...)
+boolean copy_data(typetoken tok,int ordre,char *dt){
+	terms_types * t_t=NULL;
 	table_options * p=current;
+	char * data=(char*)malloc(sizeof(char));
+	strcpy(data,dt);
+	int i=ordre;
+	while(p && i>1){
+		i--;
+		p=p->next;
+	}
+	t_t=navigate_type(p->type);
+				switch(t_t->vartype){
+					case MAP :
+					case MAP_LIT:
+							_map mp=t_t->term.Map;
+							while(mp->next)
+								mp=mp->next;
+								//t_t->term.Map->key->vartype est toujours remplit d'apres les regles qu'on a etablit en haut
+							if(type_interpreter(tok,t_t->term.Map->key->vartype)==true){
+								if(mp->key==NULL){
+									mp->key=(terms_types*)malloc(sizeof(terms_types));
+									mp->key->vartype=t_t->term.Map->key->vartype;
+									mp->key->term.data=data;
+									return true;
+								}else{
+									if(mp->key->term.data==NULL)
+										mp->key->term.data=data;
+									else{
+										if(mp->value==NULL){
+											mp->value=(terms_types*)malloc(sizeof(terms_types));
+											mp->key->vartype=t_t->term.Map->key->vartype;
+											mp->key->term.data=data;
+											return true;
+										}else
+										{	if(mp->value->term.data)
+											{
+												mp->value->term.data=data;
+												return true;
+											}else
+											{
+												mp->next=(_map)malloc(sizeof(__map));
+												mp=mp->next;
+												mp->key=(terms_types*)malloc(sizeof(terms_types));
+												mp->key->vartype=t_t->term.Map->key->vartype;
+												mp->key->term.data=data;
+												return true;
+											}
+										}
+									}
+								}
+							}
+						return false;
+						break;
+					case SET :
+					case  SET_LIT :	
+						_setlist setlist=t_t->term.Set;
+						while(setlist->next){
+								setlist=setlist->next;
+						}
+						if(type_interpreter(tok,t_t->term.Set->vartype)){
+						if(setlist->terms->term.data==NULL){
+							setlist->terms->term.data=data;
+							return true;
+						}
+						else{
+							setlist->next=(_setlist)malloc(sizeof(__setlist));
+							setlist=setlist->next;
+							setlist->terms->term.data=data;
+							return true;
+						}
+						}
+						return false;
+						break;
+					case LIST:
+
+						_setlist setlist=t_t->term.List;
+						while(setlist->next){
+								setlist=setlist->next;
+						}
+						if(type_interpreter(tok,t_t->term.List->vartype)){
+						if(setlist->terms->term.data==NULL){
+							setlist->terms->term.data=data;
+							return true;
+						}
+						else{
+							setlist->next=(_setlist)malloc(sizeof(__setlist));
+							setlist=setlist->next;
+							setlist->terms->term.data=data;
+							return true;
+						}
+					}	
+						return false;
+						break;
+					default :
+						if(type_interpreter(tok,t_t->vartype)){
+						t_t->term.data=data;
+						return true;
+					}
+						return false;
+						break;
+	}
+
+	/*
 	int i=1;
-	/*if(p){
+	if(p){
 		if(p->data && p->next && p->next->data==NULL)
 			if(p->data->value==NULL){
-				p->data->value=(char*)malloc(sizeof(char));*/
+				p->data->value=(char*)malloc(sizeof(char));
 
-/*	while(p && i<ordre){
+	while(p && i<ordre){
 		p=p->next;
 		i++;
 	}
@@ -326,8 +464,8 @@ boolean copy_data(typetoken tok,int ordre){
 				strcpy(p->data->value,yytext);
 			}
 		}
-	}
-			}*/
+	}*/
+			}
 
 //constant ::=  string | integer | float | boolean | uuid | blob | NULL
 boolean _const(){
@@ -340,7 +478,7 @@ boolean _const(){
 	else if(token==BLOB_TOKEN){con=true;}
 	else if(token==UUID_TOKEN){con=true;}
 	else if(token==HEX){con=true;}
-	//copy_data(token,insert_ordre);
+	values=remplir_values(values,yytext,token);
 	return con;
 }
 
@@ -437,18 +575,11 @@ boolean collection_type(){
 	table_options * p=tables->fields;
 	boolean col=false;
 	if(token==MAP){
-			while(p->next){
+	printf("Segmentation fault here MAP BEGIN\n");
+		while(p->next){
 				p=p->next;
-			}
-			/*if(p->type==NULL){
-				p->
-
-		//		p->type=(char*)malloc(sizeof(char)*48);
-			//	strcpy(p->type,yytext);
-		}else{
-			//	strcat(p->type,yytext);
-		}*/
-
+		}
+		remplire_type(token,p);
 		token=_lire_token();
 		if(token==LESSER){
 		//	strcat(p->type,yytext);
@@ -463,6 +594,7 @@ boolean collection_type(){
 						if(token==BIGGER){
 						//	strcat(p->type,yytext);
 							col=true;
+							printf("Segmentation fault here MAP FINISH\n");
 						}
 					}
 				}
@@ -475,12 +607,7 @@ boolean collection_type(){
 		while(p->next){
 				p=p->next;
 			}
-			if(p->type==NULL){
-			//	p->type=(char*)malloc(sizeof(char)*48);
-			//	strcpy(p->type,yytext);
-		}else{
-			//	strcat(p->type,yytext);
-		}
+			remplire_type(token,p);
 		token=_lire_token();
 		if(token==LESSER){
 			//strcat(p->type,yytext);
@@ -496,6 +623,10 @@ boolean collection_type(){
 	}
 
 	else { if(token==LIST){
+		while(p->next){
+				p=p->next;
+			}
+			remplire_type(token,p);
 			token=_lire_token();
 			if(token==LESSER){
 			//	strcat(p->type,yytext);
@@ -598,7 +729,6 @@ boolean map_keyspace(){
             }
         }
 		return maplit;
-
 }
 //islit ::= ,term : term | }
 boolean islit(){
@@ -693,8 +823,15 @@ boolean  collection_literal(){
 		printf("hani hna");
 		collit=true;
 		}
+	if(collit==true)
+	{
+		current_type=c;
+	}
 	return collit;
 }
+
+//I IGNORED UDT_LIT AND FUNCTIONS, TO BE CHECKED LATER
+//remember that you created a values Global variable that has all variables with their types in it
 typetoken mapset_literal(){
 		typetoken mapset=FALSE;
 		if(token==ACOLO){ printf("{");
@@ -732,25 +869,29 @@ typetoken mapset_literal(){
 							}
 					}
 			}
-			else if(term()){printf("Term 1() ");
+			else if(term()){
+				printf("Term 1() ");
 				token=_lire_token();
 				if(token==TWOP){
 					token=_lire_token();
-					if(term()){printf("Term 2() ");
+					if(term()){
+						printf("Term 2() ");
 						token=_lire_token();
-						if(islit()){printf("Hni f is lit "); mapset=MAP_LIT;return mapset;}
+						if(islit()){ mapset=MAP_LIT;
+							}
                 	}
                }
 				else if(token==VIRG){
 					follow_token=true;
 					token=_lire_token();
-					if(isset()){ printf("Hani f iss set"); mapset=SET_LIT;return mapset;}
+					if(isset()){ printf("Hani f iss set"); mapset=SET_LIT;}
 
 				else if(token==ACOLF) mapset=SET_LIT;
 
             	}
         	}
         }
+
 		return mapset;
 }
 
@@ -855,7 +996,16 @@ boolean tuple_literal(){
   boolean tup=false;
   if(token==POPEN){printf("(");
   	token=_lire_token();
-  	if(term()){ printf("term");
+  	if(term()){
+			while(values){
+        	if(boolean copy_data(values->type,insert_ordre,values->value)){
+        		values=values->next; 
+        	}else{
+        		errs=creer_semantic_error(ICT,cursor,errs);
+        		return FALSE;
+        	}
+       		}
+  		 printf("term");
   		token=_lire_token();
   		tup=tuple_literal_aux();
   	}
@@ -877,6 +1027,14 @@ boolean tuple_literal_aux(){
 		token=_lire_token();
 		insert_ordre++;
 		if(term()){ printf("t2\n");
+			while(values){
+        	if(boolean copy_data(values->type,insert_ordre,values->value)){
+        		values=values->next; 
+        	}else{
+        		errs=creer_semantic_error(ICT,cursor,errs);
+        		return FALSE;
+        	}
+       		}
 			token=_lire_token();
 			ttp=tuple_literal_aux();
 		}
@@ -914,7 +1072,7 @@ return n;
 
 
 //fils the current list with the mentionned variables and the primary keys
-/*boolean search_field(char*field){
+boolean search_field(char*field){
 	tab_op*p;
 	boolean b=false;
 	table_options* fields=NULL;
@@ -931,9 +1089,9 @@ return n;
 					if(current==NULL){
 						current=(table_options*)malloc(sizeof(table_options));
 						current->name=(char*)malloc(sizeof(char));
-						current->type=(char*)malloc(sizeof(char));
+						current->type=fields->type;
 						strcpy(current->name,field);
-						strcpy(current->type,fields->type);
+						current->next=NULL;
 					}else{
 						temp=current;
 						while(temp->next)
@@ -941,9 +1099,8 @@ return n;
 						temp->next=(table_options*)malloc(sizeof(table_options));
 						temp=temp->next;
 						temp->name=(char*)malloc(sizeof(char));
-						temp->type=(char*)malloc(sizeof(char));
+						temp->type=fields->type;
 						strcpy(temp->name,field);
-						strcpy(temp->type,fields->type);
 					}
 					b=true;
 				}
@@ -952,9 +1109,8 @@ return n;
 						current=(table_options*)malloc(sizeof(table_options));
 						if(fields->name){
 						current->name=(char*)malloc(sizeof(char));
-						current->type=(char*)malloc(sizeof(char));
+						current->type=fields->type;
 						strcpy(current->name,field);
-						strcpy(current->type,fields->type);
 						}
 						current->primary=fields->primary;
 
@@ -968,9 +1124,8 @@ return n;
 						temp=temp->next;
 						if(fields->name){
 						temp->name=(char*)malloc(sizeof(char));
-						temp->type=(char*)malloc(sizeof(char));
+						temp->type=fields->type;
 						strcpy(temp->name,field);
-						strcpy(temp->type,fields->type);
 						}
 						temp->primary->partition=fields->primary->partition;
 						temp->primary->name=(char*)malloc(sizeof(char));
@@ -978,6 +1133,7 @@ return n;
 						temp->primary->next=NULL;
 						}
 					}//m=temp->primary && n = pr
+
 					r=NULL;
 					if(temp)
 						m=temp->primary;
@@ -985,7 +1141,7 @@ return n;
 						while(m){
 							while(n){
 								if(strcmp(n->name,m->name)==0){
-									if(r==NULL && n)
+									if(r==NULL)
 									{	n=n->next;
 										pr=pr->next;
 									}else
@@ -1008,7 +1164,7 @@ return n;
 		}
 	}
 return b;
-}*/
+}
 //_names ::=  '(' column_name ( ',' column_name )* ')' ::= ( idf tuple_names_aux
 boolean _names(){
 char * name=(char*)malloc(sizeof(char));
@@ -1016,10 +1172,10 @@ char * name=(char*)malloc(sizeof(char));
   if(token==POPEN){
   	token=_lire_token();
   	strcpy(name,yytext);
-  //	if(search_field(name)){
+  	if(search_field(name)){
   		token=_lire_token();
   		tup=tuple_names_aux();
-  	//}
+  	}
   }
   return tup;
 }
@@ -1031,11 +1187,11 @@ boolean tuple_names_aux(){
 	if(token==VIRG){ printf(",\n");
 		token=_lire_token();
 		strcpy(name,yytext);
-  		//if(search_field(name)){ 
+  		if(search_field(name)){ 
   			printf("column2\n");
 			token=_lire_token();
 			ttp=tuple_names_aux();
-	//	}
+	}
 	}
 	else if(token==PCLOSE){ printf(")\n");
 		ttp=true;
@@ -1123,7 +1279,9 @@ boolean insert_statement()
 						token=_lire_token();
 						ins=_using_parameter();
 						}
-				else if(token==PVIRG||token==ENTER) {printf(";");ins=true;}
+				else if(token==PVIRG||token==ENTER) {
+					printf(";");
+					ins=true;}
 
 			}
 			else if(token==POINT){
@@ -4430,7 +4588,6 @@ void write_table(){
 	while(p){
 		if(p->name){
 			t_t=p->type;
-
 			printf("name :%s type : %s\n",p->name,type_interpreter(t_t));
 			json_object_set_new(table_fields,p->name,json_string(type_interpreter(t_t)));
 		}

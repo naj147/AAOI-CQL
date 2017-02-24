@@ -22,7 +22,6 @@ typedef struct _terms_types{
 	_setlist Set;
 	char* data;
 	}term;
- //	cqlTypes termtype;
  	typetoken vartype;
 }terms_types;
 
@@ -33,13 +32,14 @@ typedef struct ___map{
 }__map;
 typedef struct ___setlist{
 	terms_types * terms;
-	_setlist * next;
+	_setlist  next;
 }__setlist;
 
 
-//type data was depricated !
+
 typedef struct data
 {
+typetoken type;
 char * value;
 struct data *next;
 }table_data;
@@ -55,7 +55,6 @@ typedef struct table{
 	char* name;
 	terms_types* type;//char * is going to be replaced by the new type
 	primary* primary;
-//	table_data* data;//this is going to be removed
 	struct table* next;
 }table_options;
 
@@ -219,4 +218,8 @@ void read_json(char *);
 boolean addTable_Keyspace();
 void write_table();
 void create_json_keyspace();
+void afficherhadchi(table_options * n);
+char * type_interp_aux(typetoken tok);
+typetoken char_to_token(char * tok);
+char* type_interp(terms_types * t);
 table_options *read_table(char * table_name, char *keyspace_name);

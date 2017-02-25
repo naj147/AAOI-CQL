@@ -1,1 +1,1 @@
-insert into Excalibur.users (password,user_name) values ('122533544as','sqgdsgdfhg1');
+insert into Excelso.users(user_name,password) values ('122533544as',1);

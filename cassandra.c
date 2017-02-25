@@ -5,11 +5,12 @@
 //#include <ctype.h>
 #include <jansson.h>
 #include "error.h"
-
+#include "murmur3.h"
+#include <stdint.h>
 
 extern char* yytext;
 char* prt;
-
+int T[4]={-2147483648,0,1073741823,2147483647};
 primary *pr=NULL;
 table_options *used=NULL;
 tab_op *tables=NULL;
@@ -53,7 +54,19 @@ table_data *p=NULL;
 	}
 	return v;
 }
-
+//H :tableau hashé, T le tableau des valeurs max, k_H parcoureur du tableau H, l : longueur du tableau H
+int which_file(int H[],int k_H,int l)
+{
+	//int k_H=0;
+	while(k_H<l){
+	for(int m=0;m<4;m++){
+		if(H[k_H]<T[m]) return m+1;
+		else if(H[k_H]==T[m]){ k_H++;
+	 	 return which_file(H,k_H,l);}
+	 	}
+	}
+return -1;
+}
 typetoken _lire_token(){
 	if(follow_token){
 	follow_token=false;//remise a zero du marqueur de surlecture
@@ -61,7 +74,78 @@ typetoken _lire_token(){
 	}
 	else return (typetoken) yylex();
 }
+void write_insert(){
+	//printf("FFFFFF");
+	table_options *t=current;
 
+	primary *p=NULL;
+	json_t* row=json_object();
+	char * value=(char*)malloc(100*sizeof(char));
+	char * hexstring=(char*)malloc(100*sizeof(char));
+	int i=0,k=0,j=0,l;
+
+char * path;
+	int hash_keys[31]={0};
+	uint32_t hex[4];
+	uint32_t seed = 42;
+	char * filename=(char*)malloc(100*sizeof(char));
+	uint32_t number;
+	//writing all the
+	while(t)
+	{
+		if(t->type->term.data->value){
+				json_object_set(row,t->name,json_string(t->type->term.data->value));
+				printf("my value is %s",t->type->term.data->value);
+		}
+		if(t->primary) {
+			p=t->primary;
+			//printf("%s\n and partition = %d",p->name,p->partition);
+		}
+		t=t->next;
+	}
+	//determine which file to write to by testing the partition keys
+		//here we get the hashed values
+	while(p!=NULL && p->partition==1 && j<31)
+	{
+			strcpy(value,json_string_value(json_object_get(row,p->name)));
+			printf("\n%s",value);
+		MurmurHash3_x64_128(value,sizeof(value),seed,hex);
+	//	number = (int)strtol((const char *)hexstring[0],NULL,16);
+	/*	sprintf(hexstring,"%lx",hex);
+		printf("\n%s",hexstring);
+		number = (long int)strtol(hexstring,NULL,16);*/
+		sprintf(hexstring,"%08x%08x%08x%08x" ,hex[0],hex[1],hex[2],hex[3]);
+
+			//printf("NUMBER : %d\n",number);
+			number = strtol(hexstring,NULL,32);
+		//	printf("\n%s",hexstring);
+		hash_keys[j]=number;
+		printf("\n%ld",number);
+			j++;
+			p=p->next;
+	}
+	//here we determine which file to write to
+	int r=0;
+		l=which_file(hash_keys,r,j);
+		printf("\n%d\n",l);
+	sprintf(filename,"table%d.txt",l);
+	//printf("%s", memtable.name);
+		path=(char*)malloc(sizeof(char)*1024);
+		strcpy(path, memtable.name);
+		strcat(path,"/");
+		strcat(path,memtable.tables->name);
+		strcat(path,"/");
+		strcat(path,filename);
+		printf("\n%s",path);
+
+		json_t* rows=json_array();
+		rows=json_load_file(path,0,&error);
+		if(rows==NULL)
+		printf("FUCK YOU AFAF\n");
+		json_array_append(row,rows);
+		json_dump_file(row,path,0);
+
+}
 
 //cql_type ::=  native_type | collection_type | user_defined_type | tuple_type | custom_type
 
@@ -110,7 +194,7 @@ terms_types *utype;//the type in the next function call
 			break;
 		default :
 			return type;
-			break;				
+			break;
 		}
 	}
 		return NULL;
@@ -133,7 +217,7 @@ void * remplire_type_aux(typetoken tok, terms_types* t_t){
 						}
 						break;
 					case SET :
-					case  SET_LIT :	
+					case  SET_LIT :
 						t_t->term.Set->terms=(terms_types*)malloc(sizeof(terms_types));
 						t_t->term.Set->terms->vartype=tok;
 						break;
@@ -149,7 +233,7 @@ void * remplire_type_aux(typetoken tok, terms_types* t_t){
 				printf("Segmentation fault here REMPLIRE_AUX FIN\n");
 }
 
-//remplir type 
+//remplir type
 void * remplire_type(typetoken tok, table_options * T){
 	terms_types * t_t=NULL;
 	table_options * p=T;
@@ -169,7 +253,7 @@ void * remplire_type(typetoken tok, table_options * T){
 					}
 						break;
 					case SET :
-					case  SET_LIT :	
+					case  SET_LIT :
 					if(p->type==NULL){
 						p->type=(terms_types*)malloc(sizeof(terms_types));
 						p->type->vartype=tok;
@@ -177,7 +261,7 @@ void * remplire_type(typetoken tok, table_options * T){
 					}else{
 						t_t=navigate_type(p->type);//BS
 						remplire_type_aux(tok,t_t);
-						
+
 					}
 						break;
 					case LIST:
@@ -189,7 +273,7 @@ void * remplire_type(typetoken tok, table_options * T){
 					else{
 						t_t=navigate_type(p->type);//BS
 						remplire_type_aux(tok,t_t);
-					}	
+					}
 						break;
 					default :
 					if(p->type==NULL){
@@ -198,7 +282,7 @@ void * remplire_type(typetoken tok, table_options * T){
 						p->type->term.data=NULL;
 						}else{
 							printf("Noooo\n");
-						t_t=navigate_type(p->type);	
+						t_t=navigate_type(p->type);
 
 						remplire_type_aux(tok,t_t);
 						}
@@ -263,7 +347,7 @@ boolean native_type(){
 						}
 						break;
 					case SET :
-					case  SET_LIT :	
+					case  SET_LIT :
 						t_t->term.Set->terms=(terms_types*)malloc(sizeof(terms_types));
 						t_t->term.Set->terms->vartype=token;
 						t_t->term.Set->terms->term.data=NULL;
@@ -344,54 +428,108 @@ boolean copy_data(typetoken tok,int ordre,char *dt){
 	int i=ordre;
 	_map mp;
 	_setlist setlist;
-
+	printf("\n\n\nORDRE IS %d",i);
 	while(p && i>1){
 		i--;
 		p=p->next;
 	}
+
 	t_t=navigate_type(p->type);
+
 				switch(t_t->vartype){
 					case MAP :
 					case MAP_LIT:
+
 							mp=t_t->term.Map;
 							while(mp->next)
 								mp=mp->next;
+
 								//t_t->term.Map->key->vartype est toujours remplit d'apres les regles qu'on a etablit en haut
-							if(type_interpreter(tok,t_t->term.Map->key->vartype)==true){;
+							if(type_interpreter(tok,t_t->term.Map->key->vartype)==true){
+								printf("I ENTER KEY\n");
+
 								if(mp->key==NULL){
+									printf("I ENTRER1 \n");
 									mp->key=(terms_types*)malloc(sizeof(terms_types));
 									mp->key->vartype=t_t->term.Map->key->vartype;
 									mp->key->term.data=(table_data*)malloc(sizeof(table_data));
-									mp->key->term.data->value=(char*)malloc(sizeof(char));
+									mp->key->term.data->value=(char*)malloc(sizeof(char)*100);
 									strcpy(mp->key->term.data->value,data);
 									mp->key->term.data->next=NULL;
+
 									return true;
 								}else{
 									if(mp->key->term.data==NULL){
+										printf("I ENTRER2 \n");
 										mp->key->term.data=(table_data*)malloc(sizeof(table_data));
 										mp->key->term.data->value=(char*)malloc(sizeof(char));
 										strcpy(mp->key->term.data->value,data);
 										mp->value->term.data->next=NULL;
+
+
 										}
 									else{
 										if(mp->value==NULL){
+											printf("I ENTRER3 \n");
 											mp->value=(terms_types*)malloc(sizeof(terms_types));
 											mp->value->vartype=t_t->term.Map->key->vartype;
 											mp->value->term.data=(table_data*)malloc(sizeof(table_data));
 											mp->value->term.data->value=(char*)malloc(sizeof(char));
 											strcpy(mp->value->term.data->value,data);
 											mp->value->term.data->next=NULL;
+
 											return true;
 										}else
 										{	if(mp->value->term.data)
 											{
+												printf("I ENTRER4 \n");
 												mp->value->term.data=(table_data*)malloc(sizeof(table_data));
 												mp->value->term.data->value=(char*)malloc(sizeof(char));
 												strcpy(mp->value->term.data->value,data);
 												mp->value->term.data->next=NULL;
+
 												return true;
 											}else
 											{
+												printf("I ENTRER5 \n");
+												mp->next=(_map)malloc(sizeof(__map));
+												mp=mp->next;
+												mp->key=(terms_types*)malloc(sizeof(terms_types));
+												mp->key->vartype=t_t->term.Map->key->vartype;
+												mp->key->term.data=(table_data*)malloc(sizeof(table_data));
+												mp->key->term.data->value=(char*)malloc(sizeof(char));
+												strcpy(mp->key->term.data->value,data);
+												mp->key->term.data->next=NULL;
+
+												return true;
+											}
+										}
+									}
+								}
+							}else if(type_interpreter(tok,t_t->term.Map->value->vartype)==true){
+								if(mp->value==NULL){
+											printf("I ENTRER6 \n");
+											mp->value=(terms_types*)malloc(sizeof(terms_types));
+											mp->value->vartype=t_t->term.Map->key->vartype;
+											mp->value->term.data=(table_data*)malloc(sizeof(table_data));
+											mp->value->term.data->value=(char*)malloc(sizeof(char));
+											strcpy(mp->value->term.data->value,data);
+											mp->value->term.data->next=NULL;
+
+											return true;
+										}else
+										{	if(mp->value->term.data)
+											{
+												printf("I ENTRER7 \n");
+												mp->value->term.data=(table_data*)malloc(sizeof(table_data));
+												mp->value->term.data->value=(char*)malloc(sizeof(char));
+												strcpy(mp->value->term.data->value,data);
+												mp->value->term.data->next=NULL;
+
+												return true;
+											}else
+											{
+												printf("I ENTRER8 \n");
 												mp->next=(_map)malloc(sizeof(__map));
 												mp=mp->next;
 												mp->key=(terms_types*)malloc(sizeof(terms_types));
@@ -403,13 +541,11 @@ boolean copy_data(typetoken tok,int ordre,char *dt){
 												return true;
 											}
 										}
-									}
-								}
 							}
 						return false;
 						break;
 					case SET :
-					case  SET_LIT :	
+					case  SET_LIT :
 						setlist=t_t->term.Set;
 						while(setlist->next){
 								setlist=setlist->next;
@@ -471,11 +607,12 @@ boolean copy_data(typetoken tok,int ordre,char *dt){
 							setlist->terms->term.data->next=NULL;
 							return true;
 						}
-					}	
+					}
 						return false;
 						break;
 					default :
 						if(type_interpreter(tok,t_t->vartype)){
+							printf("\nDATA%s",data);
 						t_t->term.data=(table_data*)malloc(sizeof(table_data));
 						t_t->term.data->value=(char*)malloc(sizeof(char));
 						strcpy(t_t->term.data->value,data);
@@ -521,6 +658,7 @@ boolean _const(){
 	else if(token==BLOB_TOKEN){con=true;}
 	else if(token==UUID_TOKEN){con=true;}
 	else if(token==HEX){con=true;}
+	if(con==true)
 	values=remplir_values(values,yytext,token);
 	return con;
 }
@@ -1043,13 +1181,13 @@ boolean tuple_literal(){
   		while(values){
   			printf("LA VALEUR %s\n",values->value);
         	if(copy_data(values->type,insert_ordre,values->value)){
-        		values=values->next; 
+        		values=values->next;
         	}else{
         		errs=creer_semantic_error(ICT,cursor,errs);
         		return FALSE;
         	}
        		}
-			
+
   		 printf("term");
   		token=_lire_token();
   		tup=tuple_literal_aux();
@@ -1073,8 +1211,9 @@ boolean tuple_literal_aux(){
 		insert_ordre++;
 		if(term()){ printf("t2\n");
 			while(values){
+				printf("LA VALEUR %s\n",values->value);
         	if(copy_data(values->type,insert_ordre,values->value)){
-        		values=values->next; 
+        		values=values->next;
         	}else{
         		errs=creer_semantic_error(ICT,cursor,errs);
         		return FALSE;
@@ -1138,7 +1277,7 @@ boolean search_field(char*field){
 	if(memtable.name){
 		p=memtable.tables;
 
-		afficherhadchi(p->fields);
+	//	afficherhadchi(p->fields);
 		printf("THE CURRENT FIELD %s \nnbr_primary_key(p) : %d ",field,nbr_primary_key(p->fields));
 		if(p->fields)
 		{
@@ -1158,7 +1297,7 @@ boolean search_field(char*field){
 					else{
 						temp=current;
 						while(temp->next){
-							//printf("OKI2\n");
+							printf("OKI2\n");
 							temp=temp->next;
 						}
 						temp->next=(table_options*)malloc(sizeof(table_options));
@@ -1184,7 +1323,7 @@ boolean search_field(char*field){
 						}
 						current->primary=fields->primary;
 						temp=current;
-					}else{printf("PRIMARY hahhaa\n");
+					}else{
 						temp=current;
 						if(temp){printf("NBR OF PRS %d\n",nbr_primary_key(p->fields));
 							if(nbr_primary_key(p->fields)==1){
@@ -1193,7 +1332,7 @@ boolean search_field(char*field){
 									temp=temp->next;
 								}
 								if(temp!=NULL){
-									temp->primary=(primary *)malloc(sizeof(primary));		
+									temp->primary=(primary *)malloc(sizeof(primary));
 									temp->primary->partition=fields->primary->partition;
 									temp->primary->name=(char*)malloc(sizeof(char));
 									strcpy(temp->primary->name,fields->primary->name);
@@ -1232,7 +1371,7 @@ boolean search_field(char*field){
 							while(n){printf("OKI7\n");
 								if(strcmp(n->name,m->name)==0){
 									if(r==NULL)
-									{	
+									{
 										n=n->next;
 										pr=pr->next;
 									}else
@@ -1250,10 +1389,10 @@ boolean search_field(char*field){
 							m=m->next;
 						}
 		}
+
 return b;
 }
 }
-printf("\n\n\nIN3AL JED BO MOK\n\n");
 //afficherhadchi(current);
 }
 int nbr_primary_key(table_options* p){
@@ -1284,6 +1423,7 @@ char * name=(char*)malloc(sizeof(char));
   	strcpy(name,yytext);
 
   	if(search_field(name)){
+  		printf("SUCCESS\n\n");
   		token=_lire_token();
   		tup=tuple_names_aux();
   	}
@@ -1295,10 +1435,11 @@ char * name=(char*)malloc(sizeof(char));
 boolean tuple_names_aux(){
 	char * name=(char*)malloc(sizeof(char));
 	boolean ttp=false;
-	if(token==VIRG){ printf(",\n");
+	if(token==VIRG){ printf("VIRGULE ,\n");
 		token=_lire_token();
 		strcpy(name,yytext);
-  		if(search_field(name)){ 
+  		if(search_field(name)){
+  			printf("\nSUCCESS");
   			printf("column2\n");
 			token=_lire_token();
 			ttp=tuple_names_aux();
@@ -1353,7 +1494,7 @@ boolean _using_parameter()
 
 
 boolean insert_statement()
-{	
+{
 	boolean ins=false;
 	if(token==INSERT){ printf("insert\n");
 		token=_lire_token();
@@ -1365,6 +1506,7 @@ boolean insert_statement()
 
 					token=_lire_token();
 				if(names_values()){
+
 					if(pr){
 						errs=creer_semantic_error(APM,cursor,errs);
 						return false;
@@ -1396,14 +1538,14 @@ boolean insert_statement()
 					ins=true;}
 
 			}
-			else if(token==POINT){
 
-
-
-			}
 		}
 		}
 	}}
+	if(ins==true){
+		printf("\n\n\n\n\nWTFFFFF\n");
+		write_insert();
+	}
     return ins;
 }
 
@@ -1472,6 +1614,25 @@ boolean drop_keyspace_statement(){
     return drk;
 
 }
+tab_op* make_first(tab_op* t,char * nom_table){
+tab_op* p=t;
+tab_op* k=p;
+if(strcmp(t->name,nom_table)==0){
+		return t;
+	}
+while(p){
+	if(strcmp(p->name,nom_table)==0){
+		k->next=p->next;
+		p->next=t;
+		t=p;
+		return t;
+	}
+		k=p;
+		p=p->next;
+}
+
+
+}
 /************ table_name*******************/
 boolean table_name(){
 	        char* keys=(char*)malloc(sizeof(char));
@@ -1486,12 +1647,15 @@ boolean table_name(){
 						token=_lire_token();
 						strcpy(table_name,yytext);
 						if(IDF())
-							{	
+							{
 								strcat(keys,"/");
 								strcat(keys,"keyspace.txt");
 								read_json(keys);
+								printf("seg\n");
+								memtable.tables=make_first(memtable.tables,table_name);
 								l=memtable.tables;
-								printf("le nom du table : %s ", table_name);
+								printf("fails\n");
+								printf("le nom du table : %s\n", memtable.tables->name);
 								printf("la table dans l %s\n ",l->name);
 								m=memtable.tables;
 								while(m && strcmp(m->name,table_name)!=0)
@@ -1501,7 +1665,7 @@ boolean table_name(){
 								}else{
 									errs=creer_semantic_error(TDE,cursor,errs);
 									return false;
-								}	
+								}
 								tables->fields=read_table(tables->name,tables->keyspace_name,tables->fields);//Pour l'instant je veux la premiere
  								if(tables->fields)
   							//	afficherhadchi(tables->fields);
@@ -4229,10 +4393,10 @@ if(IDF()){
 			l->fields=NULL;
 			token=_lire_token();
 					if(token==POINT){
-						token=_lire_token();	
+						token=_lire_token();
 						printf("this is the text %s\n",yytext);
 						if(true)
-							{	
+							{
 								strcat(keys,"/");
 								strcat(keys,"keyspace.txt");
 								file=fopen(keys,"r");
@@ -4289,7 +4453,7 @@ if(IDF()){
 									errs=creer_semantic_error(UK,cursor,errs);
 								}
                    		}
-	}
+	}printf("FALSE\n");
 return false;
 }
 
@@ -4312,10 +4476,8 @@ if(Keyspace_per_create()){
 				return false;
 }
 
-
-
-
 boolean create_table(){
+	int i;
 	boolean b=false;
 	if(token==TABLE){
 		token=_lire_token();
@@ -4343,6 +4505,25 @@ boolean create_table(){
 	if(b==true){
 		if(addTable_Keyspace()==true){
 		write_table();
+		char * filename=(char*)malloc(100*sizeof(char));
+		char * path=(char*)malloc(100*sizeof(char));
+		strcpy(path, memtable.name);
+		strcat(path,"/");
+		strcat(path,memtable.tables->name);
+		FILE * f;
+		for(i=1;i<5;i++){
+
+			strcpy(path, memtable.name);
+			strcat(path,"/");
+			strcat(path,memtable.tables->name);
+			strcat(path,"/");
+			//printf("my path is %s\n\n",path);
+			sprintf(filename,"table%d.txt",i);
+			printf("%s\n",filename);
+			strcat(path,filename);
+			f=fopen(path,"w");
+			fclose(f);
+		}
 		memtable.tables=tables;
 	}
 		else
@@ -4689,7 +4870,7 @@ char * type_interp_aux(typetoken tok){
 			break;
 		case TIMEUUID:
 			return "timeuuid";
-			break;												
+			break;
 		case TINYINT:
 			return "tinyint";
 			break;
@@ -4723,7 +4904,7 @@ char * type_interp(terms_types * t){
 			strcat(type,type_interp(t->term.Set->terms));
 			strcat(type,">");
 			break;
-		case LIST:	
+		case LIST:
 			strcpy(type,"LIST<");
 			strcat(type,type_interp(t->term.List->terms));
 			strcat(type,">");
@@ -4927,7 +5108,7 @@ void afficherhadchi(table_options * n){
 	printf("ENTRED\n");
 	while(p){
 		if(p->name)
-		{	
+		{
 			switch(p->type->vartype){
 			case MAP :
 			printf("\n-----------------------------\nname : %s\n type %s\n",p->name,type_interp(p->type));

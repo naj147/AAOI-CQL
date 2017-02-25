@@ -56,6 +56,7 @@ void afficher_semantic_error(data_error* errors){
 				break;
 			case ICT:
 				printf("\nIncompatible Type assigned to the field \n");
+				break;
 		}
 		cu=cu->next;
 	}

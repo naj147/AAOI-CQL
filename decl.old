@@ -1,1 +1,6 @@
 CREATE TABLE Excalibur.users (password varchar ,gender varchar,session_token varchar,state varchar,birth_year bigint,user_name varchar PRIMARY KEY);
+
+CREATE TABLE Excelso.users(user_name varchar PRIMARY KEY , password varchar );
+insert into Excelso.users (user_name,password) values ('122533544as',{'sqgdsgdfhg1':1});
+CREATE TABLE Excelso.users(user_name varchar PRIMARY KEY , password MAP<varchar,int> );
+insert into Excelso.users (user_name,password) values ('122533544as',{'sqgdsgdfhg1':1});

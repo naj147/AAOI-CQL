@@ -14,13 +14,19 @@ typedef struct ___map* _map;
 typedef struct ___setlist* _setlist;
 //typedef enum{MapLit,SetLit,ListLit,String,Integer,Blob,Bool,Float,Uuid}cqlTypes;
 
+typedef struct data
+{
+typetoken type;
+char * value;
+struct data *next;
+}table_data;
 
 typedef struct _terms_types{
  union {
 	_map Map;
 	_setlist List;
 	_setlist Set;
-	char* data;
+	table_data* data;
 	}term;
  	typetoken vartype;
 }terms_types;
@@ -37,12 +43,7 @@ typedef struct ___setlist{
 
 
 
-typedef struct data
-{
-typetoken type;
-char * value;
-struct data *next;
-}table_data;
+
 
 typedef struct prim{
 	int partition;//1 : partition key ; 0 : clustering key
@@ -222,4 +223,4 @@ void afficherhadchi(table_options * n);
 char * type_interp_aux(typetoken tok);
 typetoken char_to_token(char * tok);
 char* type_interp(terms_types * t);
-table_options *read_table(char * table_name, char *keyspace_name);
+table_options *read_table(char * table_name, char *keyspace_name,table_options* champs);

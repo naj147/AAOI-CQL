@@ -147,7 +147,6 @@ void * remplire_type_aux(typetoken tok, terms_types* t_t){
 						break;
 				}
 				printf("Segmentation fault here REMPLIRE_AUX FIN\n");
-
 }
 
 //remplir type 
@@ -321,6 +320,7 @@ boolean type_interpreter(typetoken tok,typetoken type){
 			break;
 		case HEX:
 		case UUID_TOKEN:
+		case STRING_TOKEN:
 			if(type==TEXT||type==VARCHAR)
 				return true;
 			break;
@@ -999,7 +999,7 @@ boolean tuple_literal(){
   if(token==POPEN){printf("(");
   	token=_lire_token();
   	if(term()){
-			while(values){
+  		while(values){
         	if(copy_data(values->type,insert_ordre,values->value)){
         		values=values->next; 
         	}else{
@@ -1007,6 +1007,7 @@ boolean tuple_literal(){
         		return FALSE;
         	}
        		}
+			
   		 printf("term");
   		token=_lire_token();
   		tup=tuple_literal_aux();
@@ -1062,6 +1063,7 @@ boolean names_values(){
    	if(tuple_literal()) n=true;}
 
    }
+   afficherhadchi(current);
 return n;
 }
 //values fonction
@@ -1122,17 +1124,18 @@ boolean search_field(char*field){
 						while(temp->next && temp->primary==NULL)
 							temp=temp->next;
 						if(temp->primary==NULL){
-						temp->next=(table_options*)malloc(sizeof(table_options));
-						temp=temp->next;
-						if(fields->name){
-						temp->name=(char*)malloc(sizeof(char));
-						temp->type=fields->type;
-						strcpy(temp->name,field);
-						}
-						temp->primary->partition=fields->primary->partition;
-						temp->primary->name=(char*)malloc(sizeof(char));
-						strcpy(temp->primary->name,fields->primary->name);
-						temp->primary->next=NULL;
+							temp->next=(table_options*)malloc(sizeof(table_options));
+							temp=temp->next;
+							if(fields->name){
+								temp->name=(char*)malloc(sizeof(char));
+								temp->type=fields->type;
+								strcpy(temp->name,field);
+							}printf("\nWTF PRIMARY %d\n",fields->primary->partition);
+							temp->primary=(primary *)malloc(sizeof(primary));
+							temp->primary->partition=fields->primary->partition;
+							temp->primary->name=(char*)malloc(sizeof(char));
+							strcpy(temp->primary->name,fields->primary->name);
+							temp->primary->next=NULL;
 						}
 					}
 					
@@ -1368,6 +1371,7 @@ boolean drop_keyspace_statement(){
 boolean table_name(){
 	        char* keys=(char*)malloc(48*sizeof(char));
 			char* table_name=(char*)malloc(48*sizeof(char));
+			tab_op * m=NULL;
 			strcpy(keys,yytext);
 			tab_op* l=NULL;
 			table_options*tp=NULL;
@@ -1377,13 +1381,26 @@ boolean table_name(){
 						token=_lire_token();
 						strcpy(table_name,yytext);
 						if(IDF())
-							{
+							{	
 								strcat(keys,"/");
 								strcat(keys,"keyspace.txt");
 								read_json(keys);
 								l=memtable.tables;
-								printf("le nom du table : %s", table_name);
+								printf("le nom du table : %s ", table_name);
 								printf("la table dans l %s\n ",l->name);
+								m=memtable.tables;
+								while(m && strcmp(m->name,table_name)!=0)
+									m=m->next;
+								if(m){
+								tables=m;
+								}else{
+									errs=creer_semantic_error(TDE,cursor,errs);
+									return false;
+								}	
+								tables->fields=read_table(tables->name,tables->keyspace_name);//Pour l'instant je veux la premiere
+ 								if(tables->fields)
+  									afficherhadchi(tables->fields);
+  								
 								while(l && strcmp(l->name,table_name)!=0){
 										l=l->next;
 									}
@@ -1862,9 +1879,10 @@ boolean drop(){
 		return drp;
 }
 void use_aux(char * logpath)
-{
+{			printf("WTF\n");
 		strcat(logpath,"/keyspace.txt");
 		read_json(logpath);
+
 }
 boolean us_e (){
 	cursor=1;
@@ -4401,18 +4419,24 @@ else{
   	strcpy(memtable.class,json_string_value(json_object_get(data,"class")));
   	json_t * imthetable=json_array_get(root,1);
   	imthetable=json_object_get(imthetable,"tables");
+
   	size_t k=json_array_size(imthetable);
+
   	for(int i=0;i<k;i++)
   	{
   		if(i==0 && tables==NULL){
+
   			tables=(tab_op*)malloc(sizeof(tab_op));
+  			tables->fields=NULL;
   			tables->keyspace_name=(char*)malloc(sizeof(char));
   			tables->name=(char*)malloc(sizeof(char));
   			strcpy(tables->name,json_string_value(json_array_get(imthetable,i)));
   			strcpy(tables->keyspace_name,memtable.name);
   			tables->next=NULL;
+
   		}
   		else{
+  			p->fields=NULL;
   			p=(tab_op*)malloc(sizeof(tab_op));
   			p->keyspace_name=(char*)malloc(sizeof(char));
   			p->name=(char*)malloc(sizeof(char));
@@ -4422,10 +4446,7 @@ else{
   			tables=p;
   		}
   	}
-  	printf("\ntable->name :%s table->keyspace :%s\n",tables->name,tables->keyspace_name );
-  	tables->fields=read_table(tables->name,tables->keyspace_name);//Pour l'instant je veux la premiere
-  	afficherhadchi(tables->fields);
-	memtable.tables=tables;
+		memtable.tables=tables;
 }
 }
 //ADDING A TABLE TO THE JSON KEYSPACE AND CREATING ITS FILE IF NOT ( IT DEPENDS ON WHETHER WE USE THE OPTION  IF EXISTS OR NOT)
@@ -4673,7 +4694,10 @@ table_options *read_table(char * table_name, char *keyspace_name){
 	strcat(path,table_name);
 	printf("table name is %s",table_name);
 	strcat(path,"/table.txt");
+	printf("\nNNULLED\n");
 	root = json_load_file(path,0, &error);
+
+	if(!root){printf("\nNULLED\n");
   	json_t * fields=json_array_get(root,0);
   	const char *key;
 	json_t *value;
@@ -4762,6 +4786,8 @@ table_options *read_table(char * table_name, char *keyspace_name){
   	 printf("lol1\n");
   	 afficherhadchi(champs);
   	 return champs;
+  	}//printf("NULLED\n");
+  	return NULL;
 }
 
 void afficherhadchi(table_options * n){
@@ -4772,6 +4798,8 @@ void afficherhadchi(table_options * n){
 		if(p->name)
 		{
 			printf("-----------------------------\nname : %s\n type %s\n",p->name,type_interp(p->type));
+			if(p->type->term.data!=NULL)
+				printf("%s",p->type->term.data);
 		}
 		pri=p->primary;
 		while(pri!=NULL){
